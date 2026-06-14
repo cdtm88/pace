@@ -77,14 +77,14 @@ completed: 2026-06-14
 
 # Phase 01 Plan 03: Route Protection + IDOR Queries + Auth UI Summary
 
-**proxy.ts blanket redirect, IDOR-safe query helpers (D-03 truth-condition tested), and dark zinc login/signup screens per UI-SPEC — all tasks complete pending checkpoint verification.**
+**proxy.ts blanket redirect, IDOR-safe query helpers (D-03 truth-condition tested), dark zinc login/signup screens per UI-SPEC, and browser-verified end-to-end auth loop — all 3 tasks complete.**
 
 ## Performance
 
 - **Duration:** ~20 minutes
 - **Started:** ~2026-06-14T15:40:00Z
-- **Completed:** 2026-06-14T15:59:39Z
-- **Tasks:** 2 of 3 auto-tasks complete (Task 3 is checkpoint:human-verify)
+- **Completed:** 2026-06-14T16:30:00Z
+- **Tasks:** 3 of 3 complete
 - **Files created/modified:** 19 files
 
 ## Accomplishments
@@ -102,7 +102,7 @@ completed: 2026-06-14
 
 1. **Task 1: proxy.ts + IDOR-safe queries + protected layout** — `399ab84` (feat)
 2. **Task 2: Login/signup UI + copy.ts + error-banner** — `83f7c78` (feat)
-3. **Task 3: checkpoint:human-verify** — pending (browser verification)
+3. **Task 3: checkpoint:human-verify** — VERIFIED (2026-06-14): /login zinc-950 bg + zinc-900 card renders correctly; /signup 3-field form renders correctly; /dashboard unauthenticated → redirects to /login (proxy.ts working); signup with christianmoore88@gmail.com → /dashboard shows email + Sign out button; 41/41 vitest tests pass
 
 ## Files Created/Modified
 
@@ -158,9 +158,14 @@ completed: 2026-06-14
 - **Fix:** Changed to `(err as unknown as Record<string, unknown>)["code"]`.
 - **Files modified:** `src/app/api/auth/signup/route.ts`
 
-## Pending Checkpoint
+## Checkpoint Verification — COMPLETE
 
-**Task 3 (checkpoint:human-verify):** Browser verification of the full auth flow is pending. This checkpoint verifies the behaviors that are automated-only (proxy redirect, logout redirect, SIGNUP_ENABLED gating, UI visual match). No commit blocked on this — all code is committed and buildable.
+**Task 3 (checkpoint:human-verify):** Browser verification confirmed 2026-06-14:
+- /login: zinc-950 background, zinc-900 card, white CTA — matches UI-SPEC
+- /signup: 3-field form renders correctly
+- /dashboard unauthenticated: redirects to /login — proxy.ts working
+- Signup with christianmoore88@gmail.com: lands on /dashboard showing email + Sign out button
+- All 41 vitest tests pass
 
 ## Known Stubs
 
