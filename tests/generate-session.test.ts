@@ -14,17 +14,43 @@
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-// ── Mock: @anthropic-ai/sdk ───────────────────────────────────────────────────
+// ── Hoisted mocks (vi.hoisted ensures these are available before module loading) ──
 
-const mockMessagesCreate = vi.fn();
+const {
+  mockMessagesCreate,
+  mockGetIronSession,
+  mockGenerationLimit,
+  mockReturning,
+  mockValues,
+  mockInsert,
+  mockFindUserProfileByUserId,
+} = vi.hoisted(() => {
+  const mockMessagesCreate = vi.fn();
+  const mockReturning = vi.fn();
+  const mockValues = vi.fn().mockReturnValue({ returning: mockReturning });
+  const mockInsert = vi.fn().mockReturnValue({ values: mockValues });
+  return {
+    mockMessagesCreate,
+    mockGetIronSession: vi.fn(),
+    mockGenerationLimit: vi.fn(),
+    mockReturning,
+    mockValues,
+    mockInsert,
+    mockFindUserProfileByUserId: vi.fn(),
+  };
+});
+
+// ── Mock: @anthropic-ai/sdk ───────────────────────────────────────────────────
+// Use a class to satisfy Vitest v4's requirement for constructor mocks.
+// The class's create method delegates to mockMessagesCreate so tests can control it.
 
 vi.mock("@anthropic-ai/sdk", () => {
   return {
-    default: vi.fn().mockImplementation(() => ({
-      messages: {
-        create: mockMessagesCreate,
-      },
-    })),
+    default: class MockAnthropic {
+      messages = { create: mockMessagesCreate };
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      constructor(_opts: unknown) {}
+    },
   };
 });
 
@@ -36,15 +62,11 @@ vi.mock("next/headers", () => ({
 
 // ── Mock: iron-session ────────────────────────────────────────────────────────
 
-const mockGetIronSession = vi.fn();
-
 vi.mock("iron-session", () => ({
   getIronSession: mockGetIronSession,
 }));
 
 // ── Mock: @/lib/ratelimit ─────────────────────────────────────────────────────
-
-const mockGenerationLimit = vi.fn();
 
 vi.mock("@/lib/ratelimit", () => ({
   generationLimiter: {
@@ -54,10 +76,6 @@ vi.mock("@/lib/ratelimit", () => ({
 
 // ── Mock: @/lib/db/index ──────────────────────────────────────────────────────
 
-const mockReturning = vi.fn();
-const mockValues = vi.fn().mockReturnValue({ returning: mockReturning });
-const mockInsert = vi.fn().mockReturnValue({ values: mockValues });
-
 vi.mock("@/lib/db/index", () => ({
   db: {
     insert: mockInsert,
@@ -65,8 +83,6 @@ vi.mock("@/lib/db/index", () => ({
 }));
 
 // ── Mock: @/lib/db/queries ────────────────────────────────────────────────────
-
-const mockFindUserProfileByUserId = vi.fn();
 
 vi.mock("@/lib/db/queries", () => ({
   findUserProfileByUserId: mockFindUserProfileByUserId,
@@ -234,6 +250,9 @@ function mockProfileWithFtp() {
 describe("generateSessionAction", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Restore DB chain (clearAllMocks wipes .mockReturnValue implementations)
+    mockValues.mockReturnValue({ returning: mockReturning });
+    mockInsert.mockReturnValue({ values: mockValues });
     // Default: DB insert returns the mock session
     mockReturning.mockResolvedValue([mockInsertedSession]);
     mockFindUserProfileByUserId.mockResolvedValue(null);
