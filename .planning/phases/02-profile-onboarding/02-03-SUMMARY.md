@@ -19,20 +19,23 @@ key_files:
     - src/app/(app)/profile/page.tsx
   modified:
     - src/app/(app)/dashboard/page.tsx
+    - src/app/api/auth/signup/route.ts
 decisions:
   - useActionState reuses existing saveProfileAction from Plan 02 — no new mutation logic
   - ProfileForm uses defaultValue (not controlled state) for pre-population — simpler for RSC-fed data
   - Dashboard FTP value substituted server-side via string replace to avoid raw token reaching HTML
+  - signup route NeonDbError unique-violation check must walk err.cause chain (Drizzle wraps raw error)
+requirements-completed: [PROF-02, PROF-03]
 metrics:
-  duration: "~2 minutes"
+  duration: "~45 minutes"
   completed: "2026-06-14"
-  tasks_completed: 2
-  files_modified: 3
+  tasks_completed: 3
+  files_modified: 4
 ---
 
 # Phase 02 Plan 03: ProfileForm + Dashboard FTP Status Summary
 
-**One-liner:** ProfileForm client component with `useActionState(saveProfileAction)` + SubmitButton using `useFormStatus`; `/profile` RSC pre-populates all four fields from DB; dashboard fetches profile and shows `DASHBOARD_FTP_ACTIVE` (value substituted) or `DASHBOARD_FTP_ABSENT` with an "Edit profile" link to `/profile`.
+**Pre-populated profile edit form + /profile RSC page + dashboard FTP/RPE status wired; full onboarding → edit-FTP → dashboard loop browser-verified and approved**
 
 ## Tasks Completed
 
@@ -40,12 +43,7 @@ metrics:
 |------|------|--------|-------|
 | 1 | ProfileForm component + /profile RSC page | aac7ba1 | src/components/profile/profile-form.tsx, src/app/(app)/profile/page.tsx |
 | 2 | Dashboard FTP status + edit-profile link | 59dbaed | src/app/(app)/dashboard/page.tsx |
-
-## Paused At
-
-| Task | Name | Status |
-|------|------|--------|
-| 3 | Browser verification — full onboarding → edit → dashboard loop | awaiting human verify |
+| 3 | Browser verification — full onboarding → edit → dashboard loop | APPROVED | human-verified |
 
 ## Key Decisions
 
@@ -55,9 +53,34 @@ metrics:
 
 3. **FTP value substituted via `.replace("{value}", String(profile.ftp))`** — the raw `{value}` token from `COPY.DASHBOARD_FTP_ACTIVE` is never written to HTML. Substitution happens server-side in the RSC before rendering.
 
+4. **signup route NeonDbError cause-chain walk** — Drizzle wraps the raw NeonDbError inside `err.cause`; the unique-violation check must inspect `(err?.cause as any)?.code === "23505"` rather than the top-level error property.
+
+## Browser Verification (Task 3) — Approved
+
+User confirmed all loop steps:
+- Login → /dashboard → redirect to /onboarding (no redirect loops)
+- Goals validation: blank goals shows inline error; filled goals advances to Step 2
+- Step 2 (Injuries) optional skip works; Step 3 FTP/Weight optional
+- Submit without FTP lands on dashboard showing "No FTP set · Using RPE mode" + "Edit profile" link
+- /profile loads with Goals pre-populated; adding FTP 250 and saving redirects to dashboard showing "FTP: 250W · Coggan zones active"
+- Reload persists FTP status; DB has exactly one user_profiles row (upsert confirmed — PROF-02)
+
 ## Deviations from Plan
 
-None — plan executed exactly as written.
+### Auto-fixed Issues
+
+**1. [Rule 1 - Bug] Fixed NeonDbError cause-chain walk in signup route**
+- **Found during:** Browser verification (Task 3) — duplicate email test revealed 500 response instead of expected "Email already registered" error
+- **Issue:** Drizzle ORM wraps the raw NeonDbError inside `err.cause`; the top-level error code was undefined, so the unique-violation branch was never entered
+- **Fix:** Changed check in `src/app/api/auth/signup/route.ts` to inspect `(err?.cause as any)?.code === "23505"`
+- **Files modified:** src/app/api/auth/signup/route.ts
+- **Verification:** Signup with duplicate email returns correct 409 response
+- **Committed in:** Separate fix commit during browser verification
+
+---
+
+**Total deviations:** 1 auto-fixed (Rule 1 - bug)
+**Impact on plan:** Fix corrects silent error-swallowing on duplicate signup — correctness requirement. No scope creep.
 
 ## Threat Surface Scan
 
@@ -75,4 +98,8 @@ No new network endpoints or auth paths introduced. `/profile` page gates on `ses
 - [x] `npx vitest run` — 59/59 tests pass
 - [x] `npx next build` — green; `/dashboard` and `/profile` listed as dynamic routes
 
-## Self-Check: PASSED
+- [x] Task 3 browser verification checkpoint — user approved full loop
+- [x] PROF-02: profile upsert confirmed (single row, no duplicate)
+- [x] PROF-03 display half: FTP-absent (RPE mode) and FTP-present (Coggan zones) both verified
+
+## Self-Check: PASSED — PLAN COMPLETE
