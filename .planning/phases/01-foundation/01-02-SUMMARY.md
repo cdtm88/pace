@@ -155,5 +155,11 @@ No new security surface beyond the plan's threat model. All T-1-* mitigations ap
 - No blockers
 
 ---
+## Self-Check: PASSED
+
+All 6 created files confirmed present on disk.
+All 4 task commits confirmed in git log (04cb445, a8b6903, 5be19d9, 7697f40).
+Full test suite: 34 passed, 0 failed (5 todo stubs from plan 01-03 are expected).
+
 *Phase: 01-foundation*
 *Completed: 2026-06-14*
