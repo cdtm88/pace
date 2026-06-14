@@ -9,9 +9,9 @@
 
 - [x] **AUTH-01**: User can create an account with email and password
 - [x] **AUTH-02**: User can log in and remain logged in across browser sessions (httpOnly signed cookie)
-- [ ] **AUTH-03**: User can log out from any page
-- [ ] **AUTH-04**: Login endpoint is rate-limited per-IP and per-account; invalid credentials return a generic error message (no user enumeration)
-- [ ] **AUTH-05**: SIGNUP_ENABLED flag gates public registration; the owner account is accessible without the flag
+- [x] **AUTH-03**: User can log out from any page
+- [x] **AUTH-04**: Login endpoint is rate-limited per-IP and per-account; invalid credentials return a generic error message (no user enumeration)
+- [x] **AUTH-05**: SIGNUP_ENABLED flag gates public registration; the owner account is accessible without the flag
 
 ### Profile & Onboarding
 
@@ -104,9 +104,9 @@
 |-------------|-------|--------|
 | AUTH-01 | Phase 1 | Complete |
 | AUTH-02 | Phase 1 | Complete |
-| AUTH-03 | Phase 1 | Pending |
-| AUTH-04 | Phase 1 | Pending |
-| AUTH-05 | Phase 1 | Pending |
+| AUTH-03 | Phase 1 | Complete |
+| AUTH-04 | Phase 1 | Complete |
+| AUTH-05 | Phase 1 | Complete |
 | PROF-01 | Phase 2 | Pending |
 | PROF-02 | Phase 2 | Pending |
 | PROF-03 | Phase 2 | Pending |

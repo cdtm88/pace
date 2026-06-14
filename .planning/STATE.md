@@ -4,14 +4,14 @@ milestone: v1.0
 milestone_name: milestone
 status: executing
 stopped_at: completed 01-01; ready for 01-02
-last_updated: "2026-06-14T19:34:00.000Z"
-last_activity: 2026-06-14 -- Plan 01-01 complete (migration verified); advancing to 01-02
+last_updated: "2026-06-14T15:42:49.703Z"
+last_activity: 2026-06-14 -- Plan 01-01 complete; migration verified; 4 tables in Neon
 progress:
   total_phases: 6
   completed_phases: 0
   total_plans: 3
-  completed_plans: 1
-  percent: 7
+  completed_plans: 2
+  percent: 0
 ---
 
 # Project State
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-06-14)
 ## Current Position
 
 Phase: 01 (foundation) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 Status: Ready to execute (01-02 — Auth route handlers)
 Last activity: 2026-06-14 -- Plan 01-01 complete; migration verified; 4 tables in Neon
 
@@ -52,6 +52,7 @@ Progress: [█░░░░░░░░░] 7%
 - Trend: —
 
 *Updated after each plan completion*
+| Phase 01-foundation P02 | 7 | 2 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -65,6 +66,10 @@ Recent decisions affecting current work:
 - Phase 3: iron-session cookie/redirect constraint — auth mutations are Route Handlers only; no session.save() in RSC
 - Phase 3: powerFraction Zod field must be float [0.1, 1.8]; builder never accepts raw watts
 - Phase 5: Strava token refresh race — 10-min expiry buffer + atomic write; 401 = "disconnected — reconnect" UI signal
+- [Phase ?]: D-05: bcryptjs CF12 — bcrypt.hash(plain, 12) in signup; no native bcrypt/argon2 on Vercel
+- [Phase ?]: D-07: AUTH_ERROR const used identically for missing user and wrong password (anti-enumeration, T-1-03)
+- [Phase ?]: D-10: Promise.all dual-axis rate limit — block on ipLimiter OR emailLimiter failure (Pitfall 6)
+- [Phase ?]: D-11: count() check against users table bypasses SIGNUP_ENABLED when table is empty (owner bootstrap)
 
 ### Pending Todos
 
@@ -84,6 +89,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-14T19:34:00.000Z
+Last session: 2026-06-14T15:42:32.977Z
 Stopped at: completed 01-01; ready for 01-02
 Resume file: .planning/phases/01-foundation/01-02-PLAN.md

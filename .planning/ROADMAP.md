@@ -41,7 +41,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-  - [ ] 01-02-PLAN.md — Auth route handlers (signup/login/logout) + dual-axis rate limiting
+  - [x] 01-02-PLAN.md — Auth route handlers (signup/login/logout) + dual-axis rate limiting
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
@@ -130,7 +130,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation | 1/3 | In Progress | 01-01 done 2026-06-14 |
+| 1. Foundation | 2/3 | In Progress|  |
 | 2. Profile & Onboarding | 0/TBD | Not started | - |
 | 3. AI Session Generation | 0/TBD | Not started | - |
 | 4. Today View & Export | 0/TBD | Not started | - |
