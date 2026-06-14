@@ -10,7 +10,7 @@
  *
  * See: CONTEXT.md D-03, D-09; RESEARCH.md Pattern 2, Pitfall 1
  */
-import { and, eq } from "drizzle-orm";
+import { and, eq, desc } from "drizzle-orm";
 import { db } from "@/lib/db/index";
 import {
   trainingSessions,
@@ -55,6 +55,24 @@ export async function listTrainingSessions(userId: string) {
     .select()
     .from(trainingSessions)
     .where(eq(trainingSessions.userId, userId));
+}
+
+/**
+ * Fetch the most recently generated session for the authenticated user.
+ *
+ * IDOR note: Single eq() is correct here — no secondary resource id to guard.
+ * Same exemption as findUserProfileByUserId: userId is sufficient to scope the query
+ * because we return the latest session for the caller's own account only.
+ * Returns null when the user has no sessions yet.
+ */
+export async function findLatestSessionByUserId(userId: string) {
+  const rows = await db
+    .select()
+    .from(trainingSessions)
+    .where(eq(trainingSessions.userId, userId))
+    .orderBy(desc(trainingSessions.createdAt))
+    .limit(1);
+  return rows[0] ?? null;
 }
 
 // ── User Profiles ─────────────────────────────────────────────────────────────

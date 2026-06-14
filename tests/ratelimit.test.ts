@@ -1,13 +1,16 @@
 /**
- * Rate limit tests — covers D-10 dual-axis Upstash rate limiting.
+ * Rate limit tests — covers D-10 dual-axis Upstash rate limiting + generationLimiter.
  *
- * Implements: AUTH-04 (dual-axis rate limiting)
+ * Implements: AUTH-04 (dual-axis rate limiting), GEN-03 (per-user generation limit)
  * See: CONTEXT.md D-10, RESEARCH.md Pattern 4, Pitfall 6
  *
  * Strategy: Mock @upstash/ratelimit and @upstash/redis so tests run without
  * a live Upstash instance. Verify that ipLimiter and emailLimiter are created
  * with the correct window/prefix config, and that the login handler blocks on
  * either limiter failure.
+ *
+ * Also verifies generationLimiter (D-10): 10 req/24h per userId.
+ * Key is userId (UUID from iron-session), never client-supplied.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
@@ -132,5 +135,35 @@ describe("Login rate limit — per-email (AUTH-04)", () => {
     const ipResult = await ipLimiter.limit("1.2.3.4");
     const emailResult = await emailLimiter.limit("user@example.com");
     expect(!ipResult.success || !emailResult.success).toBe(true);
+  });
+});
+
+describe("Generation rate limit — per-user (GEN-03 / D-10)", () => {
+  it("exports generationLimiter with slidingWindow(10, '24 h') and prefix 'rl:generate:user'", async () => {
+    await import("@/lib/ratelimit");
+    const genCall = constructorCalls.find(
+      (c) =>
+        typeof c === "object" &&
+        c !== null &&
+        (c as Record<string, unknown>)["prefix"] === "rl:generate:user"
+    );
+    expect(genCall).toBeDefined();
+    expect((genCall as Record<string, unknown>)["limiter"]).toBe(
+      "slidingWindow:10:24 h"
+    );
+  });
+
+  it("blocks a userId that has exceeded the daily generation cap", async () => {
+    mockLimit.mockResolvedValue({ success: false });
+    const { generationLimiter } = await import("@/lib/ratelimit");
+    const result = await generationLimiter.limit("user-uuid-123");
+    expect(result.success).toBe(false);
+  });
+
+  it("allows a userId within the daily generation cap", async () => {
+    mockLimit.mockResolvedValue({ success: true });
+    const { generationLimiter } = await import("@/lib/ratelimit");
+    const result = await generationLimiter.limit("user-uuid-123");
+    expect(result.success).toBe(true);
   });
 });

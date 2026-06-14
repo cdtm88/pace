@@ -53,3 +53,17 @@ export const emailLimiter = UPSTASH_AVAILABLE
       prefix: "rl:login:email",
     })
   : PASS_THROUGH;
+
+/**
+ * Per-user generation limiter: 10 requests per 24 hours.
+ * Key: userId (UUID from iron-session) — prevents email alias bypass (Pitfall 6).
+ * Never use a client-supplied id as the key.
+ * Error message on 429: "Daily limit reached. Try again tomorrow." (GEN-03)
+ */
+export const generationLimiter = UPSTASH_AVAILABLE
+  ? new Ratelimit({
+      redis: redis!,
+      limiter: Ratelimit.slidingWindow(10, "24 h"),
+      prefix: "rl:generate:user",
+    })
+  : PASS_THROUGH;
