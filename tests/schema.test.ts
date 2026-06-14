@@ -62,6 +62,29 @@ describe("userProfiles table", () => {
       (userProfiles as unknown as Record<symbol, string>)[Symbol.for("drizzle:Name")]
     ).toBe("user_profiles");
   });
+
+  it("has ftp, weight, goals, injuries, onboarding_complete columns", () => {
+    const cols = userProfiles[Symbol.for("drizzle:Columns")] as Record<
+      string,
+      { name: string; notNull: boolean }
+    >;
+    const colNames = Object.values(cols).map((c) => c.name);
+    expect(colNames).toContain("ftp");
+    expect(colNames).toContain("weight");
+    expect(colNames).toContain("goals");
+    expect(colNames).toContain("injuries");
+    expect(colNames).toContain("onboarding_complete");
+  });
+
+  it("onboarding_complete is notNull", () => {
+    const cols = userProfiles[Symbol.for("drizzle:Columns")] as Record<
+      string,
+      { name: string; notNull: boolean }
+    >;
+    const col = Object.values(cols).find((c) => c.name === "onboarding_complete");
+    expect(col).toBeDefined();
+    expect(col!.notNull).toBe(true);
+  });
 });
 
 describe("trainingSessions table", () => {

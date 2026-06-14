@@ -13,7 +13,7 @@
  * FK note: onDelete "cascade" ensures orphaned cross-user rows cannot persist
  * after user deletion (T-1-IDOR-FK mitigation).
  */
-import { pgTable, uuid, text, timestamp, index } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, timestamp, index, integer, real, boolean } from "drizzle-orm/pg-core";
 
 // ── users ─────────────────────────────────────────────────────────────────────
 
@@ -25,17 +25,27 @@ export const users = pgTable("users", {
 });
 
 // ── user_profiles ─────────────────────────────────────────────────────────────
-// Phase 2 adds profile columns via migration:
-//   ftp integer, weight real, goals text, injuries text, weeklyHours integer, etc.
+// Phase 2 profile columns added:
+//   ftp integer (nullable), weight real (nullable), goals text (nullable),
+//   injuries text (nullable), onboarding_complete boolean NOT NULL DEFAULT false
 
 export const userProfiles = pgTable(
   "user_profiles",
   {
     id: uuid("id").primaryKey().defaultRandom(),
     // user_id FK — required on every non-users table (D-01)
+    // .unique() enforces one-profile-per-user; required for onConflictDoUpdate target (T-02-03)
     userId: uuid("user_id")
       .notNull()
+      .unique()
       .references(() => users.id, { onDelete: "cascade" }),
+    // Phase 2: profile columns — ftp/weight/goals/injuries nullable (PROF-01: FTP not required)
+    ftp: integer("ftp"),
+    weight: real("weight"),
+    goals: text("goals"),
+    injuries: text("injuries"),
+    // NOT NULL DEFAULT false — safe migration on existing rows (T-02-02 / Pitfall 4)
+    onboardingComplete: boolean("onboarding_complete").notNull().default(false),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
