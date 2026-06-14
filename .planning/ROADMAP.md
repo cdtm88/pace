@@ -86,7 +86,21 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. A deterministic safety gate (outside AI) validates session safety before persist; sessions that pass the gate are written to the DB
   4. A user who has hit their daily generation limit receives a clear "limit reached" message instead of an AI call
 
-**Plans**: TBD
+**Plans**: 3 plans
+
+**Wave 1**
+
+  - [ ] 03-01-PLAN.md — training_sessions migration (D-01) + Zod output schema (D-03) + deterministic safety gate (D-04) + generationLimiter (D-10) + session query helper + test scaffolds
+
+**Wave 2** *(blocked on Wave 1)*
+
+  - [ ] 03-02-PLAN.md — Install @anthropic-ai/sdk + cache-controlled prompt module (D-05/D-06/D-07) + server-side watt computation (D-02) + generateSessionAction full D-09 pipeline
+
+**Wave 3** *(blocked on Wave 2)*
+
+  - [ ] 03-03-PLAN.md — SessionGenerator dashboard UI (tap-selector D-11, summary card D-12, ErrorBanner D-13) + dashboard wiring + browser-verify checkpoint
+
+**UI hint**: yes
 
 ### Phase 4: Today View & Export
 
