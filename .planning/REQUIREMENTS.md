@@ -15,9 +15,9 @@
 
 ### Profile & Onboarding
 
-- [ ] **PROF-01**: New user is guided through an onboarding wizard capturing training goals, injury notes, and optionally FTP and weight; FTP is not required — complete beginners and injury-recovery users can skip it and still receive generated sessions
+- [x] **PROF-01**: New user is guided through an onboarding wizard capturing training goals, injury notes, and optionally FTP and weight; FTP is not required — complete beginners and injury-recovery users can skip it and still receive generated sessions
 - [ ] **PROF-02**: User can edit their profile (FTP, weight, goals, injury notes) at any time after onboarding; FTP can be added later once a test is possible
-- [ ] **PROF-03**: When FTP is present, it is used as the reference for all watt targets and zone labels; when absent, Claude generates sessions using RPE-based descriptions and conservative absolute-watt targets appropriate for the user's stated context (beginner / returning from injury)
+- [x] **PROF-03**: When FTP is present, it is used as the reference for all watt targets and zone labels; when absent, Claude generates sessions using RPE-based descriptions and conservative absolute-watt targets appropriate for the user's stated context (beginner / returning from injury)
 
 ### Session Generation
 
@@ -107,9 +107,9 @@
 | AUTH-03 | Phase 1 | Complete |
 | AUTH-04 | Phase 1 | Complete |
 | AUTH-05 | Phase 1 | Complete |
-| PROF-01 | Phase 2 | Pending |
+| PROF-01 | Phase 2 | Complete |
 | PROF-02 | Phase 2 | Pending |
-| PROF-03 | Phase 2 | Pending |
+| PROF-03 | Phase 2 | Complete |
 | GEN-01 | Phase 3 | Pending |
 | GEN-02 | Phase 3 | Pending |
 | GEN-03 | Phase 3 | Pending |

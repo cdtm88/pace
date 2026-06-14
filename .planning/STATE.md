@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: completed
-stopped_at: Phase 2 UI-SPEC approved
-last_updated: "2026-06-14T16:44:58.916Z"
-last_activity: 2026-06-14 -- Phase 01 complete; browser auth loop verified (signup → dashboard → logout)
+status: executing
+stopped_at: Completed 02-01-PLAN.md
+last_updated: "2026-06-14T16:51:07.203Z"
+last_activity: 2026-06-14 -- Phase 02 execution started
 progress:
   total_phases: 6
   completed_phases: 1
-  total_plans: 3
-  completed_plans: 3
+  total_plans: 6
+  completed_plans: 4
   percent: 17
 ---
 
@@ -25,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-06-14)
 
 ## Current Position
 
-Phase: 01 (foundation) — COMPLETE
-Plan: 3 of 3 complete
-Status: Phase 01 done; next is Phase 02 (Profile & Onboarding)
-Last activity: 2026-06-14 -- Phase 01 complete; browser auth loop verified (signup → dashboard → logout)
+Phase: 02 (Profile & Onboarding) — EXECUTING
+Plan: 2 of 3
+Status: Ready to execute
+Last activity: 2026-06-14 -- Phase 02 execution started
 
 Progress: [██░░░░░░░░] 17%
 
@@ -54,6 +54,7 @@ Progress: [██░░░░░░░░] 17%
 *Updated after each plan completion*
 | Phase 01-foundation P02 | 7 | 2 tasks | 8 files |
 | Phase 01-foundation P03 | 20 | 2 tasks | 19 files |
+| Phase 02-profile-onboarding P01 | 15 | 3 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -74,6 +75,8 @@ Recent decisions affecting current work:
 - Phase 1 P03: D-08: proxy.ts blanket redirect — getIronSession(request.cookies, sessionOptions); no cookie-header fallback
 - Phase 1 P03: D-03: IDOR-safe query helpers in queries.ts — single and() call; null → notFound() → 404; 7 tests green
 - Phase 1 P03: Lazy Neon client via Proxy — defers neon() to first request to prevent Turbopack build-worker failures
+- [Phase ?]: Phase 2 P01: userId .unique() on user_profiles — prerequisite for onConflictDoUpdate upsert (T-02-03)
+- [Phase ?]: Phase 2 P01: findUserProfileByUserId uses single eq() — userId IS resource identifier, and() rule exempt
 
 ### Pending Todos
 
@@ -93,6 +96,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-14T16:30:37.610Z
-Stopped at: Phase 2 UI-SPEC approved
-Resume file: .planning/phases/02-profile-onboarding/02-UI-SPEC.md
+Last session: 2026-06-14T16:50:59.314Z
+Stopped at: Completed 02-01-PLAN.md
+Resume file: None
