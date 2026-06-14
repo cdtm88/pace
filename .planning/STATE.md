@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 02-01-PLAN.md
-last_updated: "2026-06-14T17:16:06.620Z"
-last_activity: 2026-06-14 -- Phase 02 execution started
+stopped_at: Completed 02-03-PLAN.md
+last_updated: "2026-06-14T18:20:00.000Z"
+last_activity: 2026-06-14 -- Phase 02 complete (all 3 plans done, browser-verified)
 progress:
   total_phases: 6
   completed_phases: 2
@@ -25,12 +25,12 @@ See: .planning/PROJECT.md (updated 2026-06-14)
 
 ## Current Position
 
-Phase: 02 (profile-onboarding) — EXECUTING
-Plan: 2 of 3
-Status: Ready to execute
-Last activity: 2026-06-14 -- Phase 02 execution started
+Phase: 02 (profile-onboarding) — COMPLETE
+Plan: 3 of 3 (all done)
+Status: Phase 02 complete — ready for Phase 03
+Last activity: 2026-06-14 -- Phase 02 all plans complete, browser-verified
 
-Progress: [██░░░░░░░░] 17%
+Progress: [███░░░░░░░] 33%
 
 ## Performance Metrics
 
@@ -55,6 +55,8 @@ Progress: [██░░░░░░░░] 17%
 | Phase 01-foundation P02 | 7 | 2 tasks | 8 files |
 | Phase 01-foundation P03 | 20 | 2 tasks | 19 files |
 | Phase 02-profile-onboarding P01 | 15 | 3 tasks | 10 files |
+| Phase 02-profile-onboarding P02 | ~60 | 3 tasks | 8 files |
+| Phase 02-profile-onboarding P03 | ~45 | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -77,6 +79,9 @@ Recent decisions affecting current work:
 - Phase 1 P03: Lazy Neon client via Proxy — defers neon() to first request to prevent Turbopack build-worker failures
 - [Phase ?]: Phase 2 P01: userId .unique() on user_profiles — prerequisite for onConflictDoUpdate upsert (T-02-03)
 - [Phase ?]: Phase 2 P01: findUserProfileByUserId uses single eq() — userId IS resource identifier, and() rule exempt
+- Phase 2 P03: useFormStatus SubmitButton must be a separate child component from the form (cannot call useFormStatus in same component rendering <form>)
+- Phase 2 P03: Drizzle wraps NeonDbError in err.cause — unique-violation check must walk cause chain (err?.cause?.code === "23505")
+- Phase 2 P03: Dashboard FTP value uses COPY.DASHBOARD_FTP_ACTIVE.replace("{value}", String(profile.ftp)) — raw token never reaches HTML
 
 ### Pending Todos
 
@@ -96,6 +101,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-14T17:16:06.615Z
-Stopped at: Completed 02-01-PLAN.md
+Last session: 2026-06-14T18:20:00.000Z
+Stopped at: Completed 02-03-PLAN.md (Phase 02 fully complete)
 Resume file: None
