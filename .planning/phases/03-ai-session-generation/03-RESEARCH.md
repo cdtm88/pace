@@ -593,17 +593,22 @@ export function validateSessionSafety(
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Prompt caching TTL — 5 min vs 1 hour**
    - What we know: Default TTL dropped to 5 minutes in March 2026. 1h TTL is available at 2x write cost with `cache_control: {type:"ephemeral", ttl:"1h"}`.
    - What's unclear: For a single-owner v1 deployment with infrequent generation, will the 5-min TTL ever actually produce cache hits? Each ride session might be hours apart.
-   - Recommendation: Use `ttl:"1h"` from the start. The system prompt is static; 1h almost always hits on subsequent requests within a session; 2x write cost on a ≥1024-token prompt is negligible vs. cache read savings.
+   - **RESOLVED:** Use `ttl:"1h"` in the `cache_control` object from the start. The system prompt is static per deploy; a 1h TTL almost always produces a cache hit on subsequent requests within a riding session, and the 2x write cost on a ≥1024-token prompt is negligible against the 5x cache-read savings. Plan 02 Task 2's `messages.create` call sets `cache_control: { type: "ephemeral", ttl: "1h" }`.
 
 2. **System prompt token count target**
    - What we know: ≥1,024 tokens required; no error on under-threshold (silent skip).
    - What's unclear: Exact token count of the planned prompt prose before padding.
-   - Recommendation: Draft the prompt, verify with `anthropic.messages.countTokens()` or the Anthropic console. Target 1,200+ tokens to have comfortable margin.
+   - **RESOLVED:** Draft the prompt and verify the count with `anthropic.messages.countTokens()` or the Anthropic console; target 1,200+ tokens for comfortable margin above the 1,024 threshold. Plan 02 Task 1 makes the ≥1,024-token length a mandatory acceptance criterion.
+
+3. **ANTHROPIC_API_KEY availability for manual testing**
+   - What we know: `ANTHROPIC_API_KEY` is declared in `src/env.ts` but its presence in the local `.env.local` was not verified at research time; manual end-to-end generation cannot run without it.
+   - What's unclear: Whether the key is already present in the developer's `.env.local`.
+   - **RESOLVED:** Treat adding `ANTHROPIC_API_KEY` to `.env.local` as a Wave 0 setup prerequisite before manual E2E testing of generation. Automated tests mock the SDK and do not need the key; only manual generation does. See the Wave 0 Gaps and Environment Availability sections, which both list this as the required setup item.
 
 ---
 
