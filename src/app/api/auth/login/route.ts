@@ -26,7 +26,7 @@ import { users } from "@/lib/db/schema";
 import { sessionOptions } from "@/lib/session";
 import type { SessionData } from "@/lib/session";
 import { loginSchema, firstIssueMessage } from "@/lib/auth/schemas";
-import { verifyPassword } from "@/lib/auth/password";
+import { verifyPassword, DUMMY_HASH } from "@/lib/auth/password";
 import { ipLimiter, emailLimiter } from "@/lib/ratelimit";
 
 /** Single error string for all auth failures — never change (D-07). */
@@ -36,10 +36,17 @@ const AUTH_ERROR = "Invalid email or password.";
 const RATE_ERROR = "Too many attempts. Try again in a few minutes.";
 
 export async function POST(req: Request): Promise<NextResponse> {
-  // 1. Extract client IP (await headers() is mandatory in Next.js 16)
+  // 1. Extract client IP — use x-real-ip (Vercel sets this to the real client IP)
+  // or the rightmost x-forwarded-for entry (Vercel appends the real IP last).
+  // Never trust split(",")[0] — that's the client-controlled leftmost entry.
   const reqHeaders = await headers();
+  const realIp = reqHeaders.get("x-real-ip");
   const forwarded = reqHeaders.get("x-forwarded-for");
-  const ip = (forwarded ? forwarded.split(",")[0] : "127.0.0.1").trim();
+  const ip = (
+    realIp ??
+    (forwarded ? forwarded.split(",").at(-1) : undefined) ??
+    "unknown"
+  ).trim();
 
   // 2. Parse + validate body
   let body: unknown;
@@ -79,16 +86,17 @@ export async function POST(req: Request): Promise<NextResponse> {
     .from(users)
     .where(eq(users.email, email));
 
-  // No user found — return generic error (D-07, T-1-03)
+  // 5. Verify password — always run bcrypt to prevent timing side-channel (T-1-03).
+  // When no user is found, compare against DUMMY_HASH so response time matches
+  // the existing-user branch. Never short-circuit here (D-07).
+  const hashToCheck = rows.length > 0 ? rows[0].passwordHash : DUMMY_HASH;
+  const passwordValid = await verifyPassword(password, hashToCheck);
+
   if (rows.length === 0) {
     return NextResponse.json({ error: AUTH_ERROR }, { status: 401 });
   }
 
   const user = rows[0];
-
-  // 5. Verify password — return generic error if wrong (D-07)
-  // bcryptjs.compare() is timing-safe (T-1-03 mitigation)
-  const passwordValid = await verifyPassword(password, user.passwordHash);
   if (!passwordValid) {
     return NextResponse.json({ error: AUTH_ERROR }, { status: 401 });
   }

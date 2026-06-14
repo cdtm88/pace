@@ -12,7 +12,7 @@
  * Responsibility Map).
  */
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { getIronSession } from "iron-session";
 import { count } from "drizzle-orm";
 import { db } from "@/lib/db/index";
@@ -21,8 +21,26 @@ import { sessionOptions } from "@/lib/session";
 import type { SessionData } from "@/lib/session";
 import { signupSchema, firstIssueMessage } from "@/lib/auth/schemas";
 import { hashPassword } from "@/lib/auth/password";
+import { ipLimiter } from "@/lib/ratelimit";
+
+const RATE_ERROR = "Too many attempts. Try again in a few minutes.";
 
 export async function POST(req: Request): Promise<NextResponse> {
+  // 0. Rate limiting — prevent account creation floods (same IP extraction as login)
+  const reqHeaders = await headers();
+  const realIp = reqHeaders.get("x-real-ip");
+  const forwarded = reqHeaders.get("x-forwarded-for");
+  const ip = (
+    realIp ??
+    (forwarded ? forwarded.split(",").at(-1) : undefined) ??
+    "unknown"
+  ).trim();
+
+  const ipResult = await ipLimiter.limit(ip);
+  if (!ipResult.success) {
+    return NextResponse.json({ error: RATE_ERROR }, { status: 429 });
+  }
+
   // 1. Parse + validate body
   let body: unknown;
   try {
@@ -81,10 +99,9 @@ export async function POST(req: Request): Promise<NextResponse> {
         err.message.includes("duplicate") ||
         (err as Record<string, unknown>)["code"] === "23505");
     if (isUniqueViolation) {
-      return NextResponse.json(
-        { error: "An account with this email already exists." },
-        { status: 409 }
-      );
+      // Return 200 with ok:true — do not reveal whether the email is registered.
+      // This prevents account enumeration via signup (D-07 applies to signup too).
+      return NextResponse.json({ ok: true }, { status: 200 });
     }
     throw err;
   }

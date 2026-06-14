@@ -13,6 +13,14 @@
  */
 import bcrypt from "bcryptjs";
 
+/**
+ * Precomputed bcrypt hash of a dummy password — used to ensure constant-time
+ * response even when no user is found (T-1-03 timing side-channel mitigation).
+ * Value: bcrypt.hashSync("__dummy__", 12)
+ */
+export const DUMMY_HASH =
+  "$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewdBPj/RK.s5uO9i";
+
 /** Hash a plaintext password with bcryptjs at cost factor 12 (D-05). */
 export async function hashPassword(plain: string): Promise<string> {
   return bcrypt.hash(plain, 12);
