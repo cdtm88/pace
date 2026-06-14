@@ -1,0 +1,41 @@
+/**
+ * Upstash rate limiters — dual-axis login rate limiting (D-10).
+ *
+ * Two independent axes protect the login endpoint:
+ *   - Per-IP:    10 attempts / 15 minutes  — defeats credential stuffing from one IP
+ *   - Per-email: 5 attempts  / 15 minutes  — defeats distributed enumeration of one account
+ *
+ * Whichever limit fires first blocks the request (Pitfall 6).
+ * Block both axes independently — never short-circuit the second check.
+ *
+ * Error message on 429: "Too many attempts. Try again in a few minutes."
+ * No timing info in the response (D-10).
+ *
+ * Env vars injected by Upstash Vercel Marketplace integration:
+ *   UPSTASH_REDIS_REST_URL
+ *   UPSTASH_REDIS_REST_TOKEN
+ */
+import { Ratelimit } from "@upstash/ratelimit";
+import { Redis } from "@upstash/redis";
+
+const redis = Redis.fromEnv();
+
+/**
+ * Per-IP limiter: 10 requests per 15 minutes.
+ * Key: client IP address (from x-forwarded-for header).
+ */
+export const ipLimiter = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(10, "15 m"),
+  prefix: "rl:login:ip",
+});
+
+/**
+ * Per-email limiter: 5 requests per 15 minutes.
+ * Key: normalized email (toLowerCase()) — prevents case variation bypass.
+ */
+export const emailLimiter = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(5, "15 m"),
+  prefix: "rl:login:email",
+});

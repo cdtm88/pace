@@ -13,20 +13,20 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // ── Module-level mocks ────────────────────────────────────────────────────────
 
-// We mock @upstash/ratelimit so we can inspect constructor calls and control
-// the `limit()` return value in each test.
-const mockRatelimitConstructor = vi.fn();
+const constructorCalls: unknown[] = [];
 const mockLimit = vi.fn();
 
 vi.mock("@upstash/ratelimit", () => {
-  const Ratelimit = vi.fn().mockImplementation((opts: unknown) => {
-    mockRatelimitConstructor(opts);
-    return { limit: mockLimit };
-  });
-  // Ratelimit.slidingWindow returns a sentinel string for easy assertion
-  (Ratelimit as unknown as Record<string, unknown>).slidingWindow = vi.fn(
-    (maxReq: number, window: string) => `slidingWindow:${maxReq}:${window}`
-  );
+  // Must use class syntax so `new Ratelimit(...)` works
+  class Ratelimit {
+    constructor(opts: unknown) {
+      constructorCalls.push(opts);
+    }
+    limit = mockLimit;
+    static slidingWindow(maxReq: number, window: string) {
+      return `slidingWindow:${maxReq}:${window}`;
+    }
+  }
   return { Ratelimit };
 });
 
@@ -38,14 +38,8 @@ vi.mock("@upstash/redis", () => ({
 
 describe("ratelimit module — ipLimiter config (D-10)", () => {
   it("exports ipLimiter with slidingWindow(10, '15 m') and prefix 'rl:login:ip'", async () => {
-    // Re-import after mocks are in place to capture constructor calls
-    const calls: unknown[] = [];
-    mockRatelimitConstructor.mockImplementation((opts: unknown) =>
-      calls.push(opts)
-    );
     await import("@/lib/ratelimit");
-
-    const ipCall = calls.find(
+    const ipCall = constructorCalls.find(
       (c) =>
         typeof c === "object" &&
         c !== null &&
@@ -58,14 +52,17 @@ describe("ratelimit module — ipLimiter config (D-10)", () => {
   });
 
   it("exports emailLimiter with slidingWindow(5, '15 m') and prefix 'rl:login:email'", async () => {
-    const calls: unknown[] = [];
-    mockRatelimitConstructor.mockImplementation((opts: unknown) =>
-      calls.push(opts)
+    await import("@/lib/ratelimit");
+    const emailCall = constructorCalls.find(
+      (c) =>
+        typeof c === "object" &&
+        c !== null &&
+        (c as Record<string, unknown>)["prefix"] === "rl:login:email"
     );
-    // Module is cached — re-check via direct import inspection
-    const { ipLimiter, emailLimiter } = await import("@/lib/ratelimit");
-    expect(ipLimiter).toBeDefined();
-    expect(emailLimiter).toBeDefined();
+    expect(emailCall).toBeDefined();
+    expect((emailCall as Record<string, unknown>)["limiter"]).toBe(
+      "slidingWindow:5:15 m"
+    );
   });
 });
 
