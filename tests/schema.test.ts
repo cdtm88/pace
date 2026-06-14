@@ -59,7 +59,7 @@ describe("userProfiles table", () => {
 
   it("declares the table name as user_profiles", () => {
     expect(
-      (userProfiles as unknown as { _: { name: string } })._.name
+      (userProfiles as unknown as Record<symbol, string>)[Symbol.for("drizzle:Name")]
     ).toBe("user_profiles");
   });
 });
@@ -76,7 +76,7 @@ describe("trainingSessions table", () => {
 
   it("declares the table name as training_sessions", () => {
     expect(
-      (trainingSessions as unknown as { _: { name: string } })._.name
+      (trainingSessions as unknown as Record<symbol, string>)[Symbol.for("drizzle:Name")]
     ).toBe("training_sessions");
   });
 });
@@ -93,7 +93,7 @@ describe("stravaConnections table", () => {
 
   it("declares the table name as strava_connections", () => {
     expect(
-      (stravaConnections as unknown as { _: { name: string } })._.name
+      (stravaConnections as unknown as Record<symbol, string>)[Symbol.for("drizzle:Name")]
     ).toBe("strava_connections");
   });
 });
