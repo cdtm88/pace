@@ -15,7 +15,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Foundation** - DB schema, auth (signup/login/logout), SIGNUP_ENABLED flag, multi-user scoping, security baseline
 - [x] **Phase 2: Profile & Onboarding** - Onboarding wizard, profile editing, FTP-optional data model, Coggan zone utility (completed 2026-06-14)
-- [ ] **Phase 3: AI Session Generation** - Claude integration, Zod output schema, deterministic safety gate, per-user rate limit
+- [x] **Phase 3: AI Session Generation** - Claude integration, Zod output schema, deterministic safety gate, per-user rate limit (completed 2026-06-14)
 - [ ] **Phase 4: Today View & Export** - On-bike glanceable display, .zwo export, pre-ride TSS/intensity preview
 - [ ] **Phase 5: Strava Integration** - OAuth connect/disconnect, AES-GCM token encryption, activity auto-match, 429 handling, progress chart
 - [ ] **Phase 6: PWA & Polish** - Serwist service worker, manifest, safe-area insets, touch targets, input attributes
@@ -98,7 +98,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 **Wave 3** *(blocked on Wave 2)*
 
-  - [ ] 03-03-PLAN.md — SessionGenerator dashboard UI (tap-selector D-11, summary card D-12, ErrorBanner D-13) + dashboard wiring + browser-verify checkpoint
+  - [x] 03-03-PLAN.md — SessionGenerator dashboard UI (tap-selector D-11, summary card D-12, ErrorBanner D-13) + dashboard wiring + browser-verify checkpoint
 
 **UI hint**: yes
 
@@ -159,7 +159,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 |-------|----------------|--------|-----------|
 | 1. Foundation | 3/3 | Complete | 2026-06-14 |
 | 2. Profile & Onboarding | 3/3 | Complete   | 2026-06-14 |
-| 3. AI Session Generation | 2/3 | In Progress|  |
+| 3. AI Session Generation | 3/3 | Complete   | 2026-06-14 |
 | 4. Today View & Export | 0/TBD | Not started | - |
 | 5. Strava Integration | 0/TBD | Not started | - |
 | 6. PWA & Polish | 0/TBD | Not started | - |
