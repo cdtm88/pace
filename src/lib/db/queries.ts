@@ -60,6 +60,22 @@ export async function listTrainingSessions(userId: string) {
 // ── User Profiles ─────────────────────────────────────────────────────────────
 
 /**
+ * Fetch the user's own profile by userId (no secondary resource ID).
+ *
+ * IDOR note: Single eq() is correct here because userId IS the resource identifier —
+ * one profile per user (userId has a unique constraint). The and() two-condition
+ * rule applies when filtering by both userId AND a per-resource id. This function
+ * is exempt: there is no secondary id to guard. (T-02-01)
+ */
+export async function findUserProfileByUserId(userId: string) {
+  const rows = await db
+    .select()
+    .from(userProfiles)
+    .where(eq(userProfiles.userId, userId));
+  return rows[0] ?? null;
+}
+
+/**
  * Fetch the user's profile record scoped to their userId.
  *
  * IDOR guard: and() is mandatory here — do not split into chained .where() calls.
