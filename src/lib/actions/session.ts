@@ -96,11 +96,12 @@ export async function generateSessionAction(
 
     // Log cache stats server-side to verify caching is active (never expose to client)
     if (msg.usage) {
+      const usage = msg.usage as unknown as Record<string, unknown>
       console.log('[generateSessionAction] token usage:', {
-        inputTokens: msg.usage.input_tokens,
-        outputTokens: msg.usage.output_tokens,
-        cacheCreationInputTokens: (msg.usage as Record<string, unknown>).cache_creation_input_tokens ?? 0,
-        cacheReadInputTokens: (msg.usage as Record<string, unknown>).cache_read_input_tokens ?? 0,
+        inputTokens: usage.input_tokens ?? 0,
+        outputTokens: usage.output_tokens ?? 0,
+        cacheCreationInputTokens: usage.cache_creation_input_tokens ?? 0,
+        cacheReadInputTokens: usage.cache_read_input_tokens ?? 0,
       })
     }
 
