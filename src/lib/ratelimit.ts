@@ -18,24 +18,38 @@
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
 
-const redis = Redis.fromEnv();
+// Fail open in local dev when Upstash env vars are not available.
+// Production always has these set via Vercel Marketplace integration.
+const UPSTASH_AVAILABLE =
+  !!process.env.UPSTASH_REDIS_REST_URL &&
+  !!process.env.UPSTASH_REDIS_REST_TOKEN;
+
+const PASS_THROUGH = {
+  limit: async () => ({ success: true as const, limit: 999, remaining: 999, reset: 0 }),
+};
+
+const redis = UPSTASH_AVAILABLE ? Redis.fromEnv() : null;
 
 /**
  * Per-IP limiter: 10 requests per 15 minutes.
  * Key: client IP address (from x-forwarded-for header).
  */
-export const ipLimiter = new Ratelimit({
-  redis,
-  limiter: Ratelimit.slidingWindow(10, "15 m"),
-  prefix: "rl:login:ip",
-});
+export const ipLimiter = UPSTASH_AVAILABLE
+  ? new Ratelimit({
+      redis: redis!,
+      limiter: Ratelimit.slidingWindow(10, "15 m"),
+      prefix: "rl:login:ip",
+    })
+  : PASS_THROUGH;
 
 /**
  * Per-email limiter: 5 requests per 15 minutes.
  * Key: normalized email (toLowerCase()) — prevents case variation bypass.
  */
-export const emailLimiter = new Ratelimit({
-  redis,
-  limiter: Ratelimit.slidingWindow(5, "15 m"),
-  prefix: "rl:login:email",
-});
+export const emailLimiter = UPSTASH_AVAILABLE
+  ? new Ratelimit({
+      redis: redis!,
+      limiter: Ratelimit.slidingWindow(5, "15 m"),
+      prefix: "rl:login:email",
+    })
+  : PASS_THROUGH;
