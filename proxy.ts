@@ -25,6 +25,13 @@ interface IronCookieStore {
 /**
  * Routes that do NOT require authentication.
  * All other routes require a valid session.id (D-08).
+ *
+ * NOTE: /onboarding is intentionally NOT in PUBLIC_PATHS — it is session-protected.
+ * A logged-out user hitting /onboarding is correctly sent to /login by the session
+ * gate below. An authenticated-but-unboarded user reaches /onboarding fine because
+ * this proxy only checks session.id (not onboardingComplete). The onboardingComplete
+ * gate lives exclusively in src/app/(app)/layout.tsx — deliberately absent here and
+ * in the (onboarding) page to prevent the redirect loop (Pitfall 1, RESEARCH.md).
  */
 const PUBLIC_PATHS = [
   "/login",
