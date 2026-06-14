@@ -58,7 +58,19 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. User can edit any profile field at any time, including adding FTP later after completing a test
   3. When FTP is present, the app resolves Coggan power zones (Z1–Z7) from it; when absent, the app uses RPE descriptors without error or degraded UI
 
-**Plans**: TBD
+**Plans**: 3 plans
+
+**Wave 1**
+
+  - [ ] 02-01-PLAN.md — Profile schema migration (+unique userId) + Coggan zones utility + Zod profileSchema + query helper + Wave 0 test scaffolds
+
+**Wave 2** *(blocked on Wave 1)*
+
+  - [ ] 02-02-PLAN.md — saveProfileAction + copy.ts + shadcn textarea/progress + 3-step onboarding wizard + (onboarding) page + (app) onboarding gate
+
+**Wave 3** *(blocked on Wave 2)*
+
+  - [ ] 02-03-PLAN.md — Profile edit form + /profile page + dashboard FTP/RPE status + edit link + full-loop browser verify
 **UI hint**: yes
 
 ### Phase 3: AI Session Generation
@@ -131,7 +143,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation | 3/3 | Complete | 2026-06-14 |
-| 2. Profile & Onboarding | 0/TBD | Not started | - |
+| 2. Profile & Onboarding | 0/3 | Not started | - |
 | 3. AI Session Generation | 0/TBD | Not started | - |
 | 4. Today View & Export | 0/TBD | Not started | - |
 | 5. Strava Integration | 0/TBD | Not started | - |
