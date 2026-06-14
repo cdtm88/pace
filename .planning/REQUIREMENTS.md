@@ -7,8 +7,8 @@
 
 ### Authentication
 
-- [ ] **AUTH-01**: User can create an account with email and password
-- [ ] **AUTH-02**: User can log in and remain logged in across browser sessions (httpOnly signed cookie)
+- [x] **AUTH-01**: User can create an account with email and password
+- [x] **AUTH-02**: User can log in and remain logged in across browser sessions (httpOnly signed cookie)
 - [ ] **AUTH-03**: User can log out from any page
 - [ ] **AUTH-04**: Login endpoint is rate-limited per-IP and per-account; invalid credentials return a generic error message (no user enumeration)
 - [ ] **AUTH-05**: SIGNUP_ENABLED flag gates public registration; the owner account is accessible without the flag
@@ -102,8 +102,8 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| AUTH-01 | Phase 1 | Pending |
-| AUTH-02 | Phase 1 | Pending |
+| AUTH-01 | Phase 1 | Complete |
+| AUTH-02 | Phase 1 | Complete |
 | AUTH-03 | Phase 1 | Pending |
 | AUTH-04 | Phase 1 | Pending |
 | AUTH-05 | Phase 1 | Pending |
@@ -130,6 +130,7 @@
 | PWA-05 | Phase 6 | Pending |
 
 **Coverage:**
+
 - v1 requirements: 26 total
 - Mapped to phases: 26
 - Unmapped: 0
