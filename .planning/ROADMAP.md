@@ -45,7 +45,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-  - [ ] 01-03-PLAN.md — proxy.ts route protection + IDOR-safe queries + login/signup UI
+  - [~] 01-03-PLAN.md — proxy.ts route protection + IDOR-safe queries + login/signup UI (Tasks 1-2 complete; Task 3 checkpoint pending)
 
 ### Phase 2: Profile & Onboarding
 

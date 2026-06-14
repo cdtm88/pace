@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-stopped_at: completed 01-01; ready for 01-02
-last_updated: "2026-06-14T15:42:49.703Z"
-last_activity: 2026-06-14 -- Plan 01-01 complete; migration verified; 4 tables in Neon
+status: checkpoint
+stopped_at: completed 01-03 Tasks 1-2; awaiting Task 3 human-verify checkpoint
+last_updated: "2026-06-14T15:59:39Z"
+last_activity: 2026-06-14 -- Plan 01-03 Tasks 1-2 complete; proxy.ts, IDOR queries, auth UI committed; awaiting browser checkpoint
 progress:
   total_phases: 6
   completed_phases: 0
@@ -25,12 +25,12 @@ See: .planning/PROJECT.md (updated 2026-06-14)
 
 ## Current Position
 
-Phase: 01 (foundation) — EXECUTING
-Plan: 3 of 3
-Status: Ready to execute (01-02 — Auth route handlers)
-Last activity: 2026-06-14 -- Plan 01-01 complete; migration verified; 4 tables in Neon
+Phase: 01 (foundation) — CHECKPOINT
+Plan: 3 of 3 (Tasks 1-2 complete; Task 3 awaiting human-verify)
+Status: Awaiting browser checkpoint (Task 3: verify end-to-end auth flow)
+Last activity: 2026-06-14 -- Plan 01-03 Tasks 1-2 complete; proxy.ts, IDOR queries, auth UI committed
 
-Progress: [█░░░░░░░░░] 7%
+Progress: [██░░░░░░░░] 11%
 
 ## Performance Metrics
 
@@ -53,6 +53,7 @@ Progress: [█░░░░░░░░░] 7%
 
 *Updated after each plan completion*
 | Phase 01-foundation P02 | 7 | 2 tasks | 8 files |
+| Phase 01-foundation P03 | 20 | 2 tasks | 19 files |
 
 ## Accumulated Context
 
@@ -70,6 +71,9 @@ Recent decisions affecting current work:
 - [Phase ?]: D-07: AUTH_ERROR const used identically for missing user and wrong password (anti-enumeration, T-1-03)
 - [Phase ?]: D-10: Promise.all dual-axis rate limit — block on ipLimiter OR emailLimiter failure (Pitfall 6)
 - [Phase ?]: D-11: count() check against users table bypasses SIGNUP_ENABLED when table is empty (owner bootstrap)
+- Phase 1 P03: D-08: proxy.ts blanket redirect — getIronSession(request.cookies, sessionOptions); no cookie-header fallback
+- Phase 1 P03: D-03: IDOR-safe query helpers in queries.ts — single and() call; null → notFound() → 404; 7 tests green
+- Phase 1 P03: Lazy Neon client via Proxy — defers neon() to first request to prevent Turbopack build-worker failures
 
 ### Pending Todos
 
@@ -89,6 +93,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-14T15:42:32.977Z
-Stopped at: completed 01-01; ready for 01-02
-Resume file: .planning/phases/01-foundation/01-02-PLAN.md
+Last session: 2026-06-14T15:59:39Z
+Stopped at: checkpoint:human-verify in 01-03 Task 3 — browser auth flow verification
+Resume file: .planning/phases/01-foundation/01-03-PLAN.md (Task 3 checkpoint)
