@@ -97,7 +97,7 @@ export async function POST(req: Request): Promise<NextResponse> {
       err instanceof Error &&
       (err.message.includes("unique") ||
         err.message.includes("duplicate") ||
-        (err as Record<string, unknown>)["code"] === "23505");
+        (err as unknown as Record<string, unknown>)["code"] === "23505");
     if (isUniqueViolation) {
       // Return 200 with ok:true — do not reveal whether the email is registered.
       // This prevents account enumeration via signup (D-07 applies to signup too).

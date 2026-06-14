@@ -9,8 +9,18 @@
  * See: RESEARCH.md Pattern 5, CONTEXT.md D-08.
  */
 import { NextRequest, NextResponse } from "next/server";
-import { getIronSession } from "iron-session";
+import { getIronSession, type SessionOptions } from "iron-session";
 import { sessionOptions, type SessionData } from "@/lib/session";
+
+// iron-session CookieStore shape (from iron-session/dist/index.d.ts).
+// Imported inline to avoid needing to re-export from iron-session's private types.
+interface IronCookieStore {
+  get: (name: string) => { name: string; value: string } | undefined;
+  set: {
+    (name: string, value: string, cookie?: Partial<{ domain: string; path: string; sameSite: boolean | "lax" | "strict" | "none"; secure: boolean; httpOnly: boolean; maxAge: number; expires: Date | number; priority: string }>): void;
+    (options: { name: string; value: string }): void;
+  };
+}
 
 /**
  * Routes that do NOT require authentication.
@@ -33,9 +43,12 @@ export async function proxy(request: NextRequest) {
 
   // Read session from request cookies (iron-session v8, no cookie-header fallback).
   // getIronSession(request.cookies, sessionOptions) — RESEARCH.md Pattern 5.
+  // Cast required: NextRequest.cookies.set() has an incompatible overload signature
+  // vs iron-session's CookieStore.set(). In proxy.ts the session is ONLY READ (never
+  // written), so the mismatch on the set() overload is irrelevant at runtime.
   const session = await getIronSession<SessionData>(
-    request.cookies,
-    sessionOptions
+    request.cookies as unknown as IronCookieStore,
+    sessionOptions as SessionOptions
   );
 
   // Redirect to /login when no session.id (unauthenticated, D-08).

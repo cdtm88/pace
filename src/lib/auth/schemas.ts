@@ -47,7 +47,7 @@ export type SignupInput = z.infer<typeof signupSchema>;
  * Returns the first issue's message, or a fallback string.
  */
 export function firstIssueMessage(
-  result: z.SafeParseError<unknown>
+  result: z.ZodSafeParseError<unknown>
 ): string {
   return result.error.issues[0]?.message ?? "Invalid input.";
 }
