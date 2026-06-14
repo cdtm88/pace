@@ -88,14 +88,14 @@ completed: 2026-06-14
 
 # Phase 01 Plan 01: Foundation Scaffold Summary
 
-**Next.js 16.2.9 + Drizzle schema with 4 FK-enforced tables, Neon HTTP client, iron-session config, and vitest scaffolding — all committed; migration SQL generated, pending apply to Neon.**
+**Next.js 16.2.9 + Drizzle schema with 4 FK-enforced tables migrated to Neon, Neon HTTP client, iron-session config, and vitest scaffolding — all 3 tasks complete.**
 
 ## Performance
 
-- **Duration:** 8 minutes
+- **Duration:** 8 minutes (execution) + manual migration step
 - **Started:** 2026-06-14T14:54:16Z
-- **Completed:** 2026-06-14T15:02:00Z
-- **Tasks:** 2 of 3 complete (Task 3 is a blocking checkpoint — requires Neon provisioning)
+- **Completed:** 2026-06-14T19:32:00Z
+- **Tasks:** 3 of 3 complete
 - **Files modified:** 18 files created/modified
 
 ## Accomplishments
@@ -114,8 +114,7 @@ completed: 2026-06-14
 3. **Task 2 GREEN: Schema, db client, session, drizzle config** - `74b8e14` (feat)
 4. **Migration SQL generated** - `67e3f76` (chore)
 5. **shadcn-generated files** - `4753322` (chore)
-
-**Checkpoint (Task 3):** Awaiting Neon provisioning and migration apply.
+6. **Task 3 COMPLETE: Migration applied to Neon** - all 4 tables verified (users, user_profiles, training_sessions, strava_connections); all 10 schema tests GREEN post-migration
 
 ## Files Created/Modified
 
@@ -169,7 +168,15 @@ No new security surface beyond plan's threat model. All T-1-* mitigations applie
 - T-1-MIGRATE: drizzle.config.ts uses DATABASE_URL_UNPOOLED
 - T-1-SC: All packages from CLAUDE.md pre-verified list
 
+## Task 3: Migration Verification
+
+- Migration applied via: `DATABASE_URL_UNPOOLED=... npx drizzle-kit migrate`
+- All 4 tables confirmed in Neon: `users`, `user_profiles`, `training_sessions`, `strava_connections`
+- All 3 non-users tables have `user_id` FK referencing `users.id` with named index
+- `npx vitest run tests/schema.test.ts` — 10/10 tests passed post-migration (2026-06-14T19:32:24Z)
+
 ## Self-Check: PASSED
 
 All 11 created files confirmed present on disk.
 All 4 task commits confirmed in git log (4a7d96f, fe41552, 74b8e14, 67e3f76).
+Task 3 migration verified: 4 tables in Neon, schema tests green.
