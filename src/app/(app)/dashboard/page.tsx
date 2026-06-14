@@ -20,6 +20,7 @@ import { getIronSession } from "iron-session";
 import { sessionOptions, type SessionData } from "@/lib/session";
 import { findUserProfileByUserId } from "@/lib/db/queries";
 import { COPY } from "@/lib/copy";
+import { SessionGenerator } from "@/components/session/session-generator";
 
 export default async function DashboardPage() {
   // Next.js 16: cookies() is async — must await (CLAUDE.md §Critical Version Constraints).
@@ -55,6 +56,9 @@ export default async function DashboardPage() {
 
         {/* FTP status line — zone-active or RPE-mode (UI-SPEC §Screen 2 item 4) */}
         <p className="text-sm text-muted-foreground">{ftpStatus}</p>
+
+        {/* Session generator — readiness tap-selector + generate button + result card (D-11, D-12) */}
+        <SessionGenerator profile={profile} />
 
         {/* Edit profile link — navigates to /profile (UI-SPEC §Screen 2 item 5) */}
         <a
