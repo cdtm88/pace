@@ -13,7 +13,7 @@ Six phases deliver the full generate → ride → log loop. Foundation and auth 
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Foundation** - DB schema, auth (signup/login/logout), SIGNUP_ENABLED flag, multi-user scoping, security baseline
+- [x] **Phase 1: Foundation** - DB schema, auth (signup/login/logout), SIGNUP_ENABLED flag, multi-user scoping, security baseline
 - [ ] **Phase 2: Profile & Onboarding** - Onboarding wizard, profile editing, FTP-optional data model, Coggan zone utility
 - [ ] **Phase 3: AI Session Generation** - Claude integration, Zod output schema, deterministic safety gate, per-user rate limit
 - [ ] **Phase 4: Today View & Export** - On-bike glanceable display, .zwo export, pre-ride TSS/intensity preview
@@ -45,7 +45,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-  - [~] 01-03-PLAN.md — proxy.ts route protection + IDOR-safe queries + login/signup UI (Tasks 1-2 complete; Task 3 checkpoint pending)
+  - [x] 01-03-PLAN.md — proxy.ts route protection + IDOR-safe queries + login/signup UI ✓ COMPLETE (2026-06-14)
 
 ### Phase 2: Profile & Onboarding
 
@@ -130,7 +130,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation | 2/3 | In Progress|  |
+| 1. Foundation | 3/3 | Complete | 2026-06-14 |
 | 2. Profile & Onboarding | 0/TBD | Not started | - |
 | 3. AI Session Generation | 0/TBD | Not started | - |
 | 4. Today View & Export | 0/TBD | Not started | - |
