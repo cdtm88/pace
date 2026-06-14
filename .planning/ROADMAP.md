@@ -14,7 +14,7 @@ Six phases deliver the full generate → ride → log loop. Foundation and auth 
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Foundation** - DB schema, auth (signup/login/logout), SIGNUP_ENABLED flag, multi-user scoping, security baseline
-- [ ] **Phase 2: Profile & Onboarding** - Onboarding wizard, profile editing, FTP-optional data model, Coggan zone utility
+- [x] **Phase 2: Profile & Onboarding** - Onboarding wizard, profile editing, FTP-optional data model, Coggan zone utility (completed 2026-06-14)
 - [ ] **Phase 3: AI Session Generation** - Claude integration, Zod output schema, deterministic safety gate, per-user rate limit
 - [ ] **Phase 4: Today View & Export** - On-bike glanceable display, .zwo export, pre-ride TSS/intensity preview
 - [ ] **Phase 5: Strava Integration** - OAuth connect/disconnect, AES-GCM token encryption, activity auto-match, 429 handling, progress chart
@@ -70,7 +70,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 **Wave 3** *(blocked on Wave 2)*
 
-  - [ ] 02-03-PLAN.md — Profile edit form + /profile page + dashboard FTP/RPE status + edit link + full-loop browser verify
+  - [x] 02-03-PLAN.md — Profile edit form + /profile page + dashboard FTP/RPE status + edit link + full-loop browser verify
 
 **UI hint**: yes
 
@@ -144,7 +144,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation | 3/3 | Complete | 2026-06-14 |
-| 2. Profile & Onboarding | 2/3 | In Progress|  |
+| 2. Profile & Onboarding | 3/3 | Complete   | 2026-06-14 |
 | 3. AI Session Generation | 0/TBD | Not started | - |
 | 4. Today View & Export | 0/TBD | Not started | - |
 | 5. Strava Integration | 0/TBD | Not started | - |
