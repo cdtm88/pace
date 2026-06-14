@@ -13,7 +13,7 @@
  * FK note: onDelete "cascade" ensures orphaned cross-user rows cannot persist
  * after user deletion (T-1-IDOR-FK mitigation).
  */
-import { pgTable, uuid, text, timestamp, index, integer, real, boolean } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, timestamp, index, integer, real, boolean, jsonb } from "drizzle-orm/pg-core";
 
 // ── users ─────────────────────────────────────────────────────────────────────
 
@@ -53,8 +53,9 @@ export const userProfiles = pgTable(
 );
 
 // ── training_sessions ─────────────────────────────────────────────────────────
-// Phase 3 adds session content columns via migration:
-//   title text, zwoXml text, powerFraction real, durationSec integer, etc.
+// Phase 3 D-01 session content columns (via migration 0002):
+//   title text NOT NULL, notes text, readiness_score integer NOT NULL,
+//   blocks jsonb NOT NULL, total_duration_sec integer NOT NULL, raw_json text
 
 export const trainingSessions = pgTable(
   "training_sessions",
@@ -64,6 +65,13 @@ export const trainingSessions = pgTable(
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
+    // D-01: session content columns — FK first, domain columns, timestamps last
+    title: text("title").notNull(),
+    notes: text("notes"),
+    readinessScore: integer("readiness_score").notNull(),
+    blocks: jsonb("blocks").notNull(),
+    totalDurationSec: integer("total_duration_sec").notNull(),
+    rawJson: text("raw_json"),   // nullable; debug only; never display to user
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (t) => [index("training_sessions_user_id_idx").on(t.userId)]

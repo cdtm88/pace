@@ -15,6 +15,13 @@
       "when": 1781455660500,
       "tag": "0001_simple_mantis",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1781460978286,
+      "tag": "0002_quick_thunderbolt_ross",
+      "breakpoints": true
     }
   ]
 }
