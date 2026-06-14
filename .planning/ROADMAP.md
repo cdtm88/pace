@@ -94,7 +94,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 **Wave 2** *(blocked on Wave 1)*
 
-  - [ ] 03-02-PLAN.md — Install @anthropic-ai/sdk + cache-controlled prompt module (D-05/D-06/D-07) + server-side watt computation (D-02) + generateSessionAction full D-09 pipeline
+  - [x] 03-02-PLAN.md — Install @anthropic-ai/sdk + cache-controlled prompt module (D-05/D-06/D-07) + server-side watt computation (D-02) + generateSessionAction full D-09 pipeline
 
 **Wave 3** *(blocked on Wave 2)*
 
@@ -159,7 +159,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 |-------|----------------|--------|-----------|
 | 1. Foundation | 3/3 | Complete | 2026-06-14 |
 | 2. Profile & Onboarding | 3/3 | Complete   | 2026-06-14 |
-| 3. AI Session Generation | 1/3 | In Progress|  |
+| 3. AI Session Generation | 2/3 | In Progress|  |
 | 4. Today View & Export | 0/TBD | Not started | - |
 | 5. Strava Integration | 0/TBD | Not started | - |
 | 6. PWA & Polish | 0/TBD | Not started | - |
