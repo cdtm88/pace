@@ -1,5 +1,5 @@
 ---
-status: complete
+status: diagnosed
 phase: 02-profile-onboarding
 source: [02-01-SUMMARY.md, 02-02-SUMMARY.md, 02-03-SUMMARY.md]
 started: 2026-06-15T00:00:00Z
@@ -78,7 +78,13 @@ blocked: 0
   reason: "User reported: no i get redirected to the sign in page"
   severity: major
   test: 11
-  root_cause: ""
-  artifacts: []
-  missing: []
+  root_cause: "route.ts returns { ok: true } with status 200 on unique violation (D-07 account-enumeration guard). SignupForm treats res.ok===true as success and router.push('/dashboard'). Since no session was set, proxy.ts bounces the user to /login. The 02-03-SUMMARY documents the fix as returning 409, but the code silently returns 200 instead."
+  artifacts:
+    - path: "src/app/api/auth/signup/route.ts"
+      issue: "Line 113 returns { ok:true } status 200 on duplicate email — client cannot distinguish success from silent rejection"
+    - path: "src/components/auth/signup-form.tsx"
+      issue: "Line 80-83: res.ok branch unconditionally redirects to /dashboard, no check for session-less 200"
+  missing:
+    - "Return 409 with { error: 'Email already registered.' } on unique violation (matches 02-03-SUMMARY intent)"
+    - "Remove the silent-200 D-07 override from signup route — D-07 applies to login enumeration, not registration"
   debug_session: ""
