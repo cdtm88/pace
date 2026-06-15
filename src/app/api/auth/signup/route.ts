@@ -93,11 +93,20 @@ export async function POST(req: Request): Promise<NextResponse> {
     userEmail = inserted[0].email;
   } catch (err: unknown) {
     // Unique constraint violation (Pitfall 5: race condition on first-user or duplicate email)
+    // Drizzle wraps the NeonDbError: top-level message becomes "Failed query:...", with the
+    // original NeonDbError in err.cause. Walk the cause chain to find the Postgres code.
+    const cause = (err as Record<string, unknown>).cause;
+    const pgCode =
+      (err as Record<string, unknown>).code ??
+      (cause as Record<string, unknown> | undefined)?.code;
+    const pgMessage =
+      (err instanceof Error ? err.message : "") +
+      (cause instanceof Error ? cause.message : "");
     const isUniqueViolation =
-      err instanceof Error &&
-      (err.message.includes("unique") ||
-        err.message.includes("duplicate") ||
-        (err as unknown as Record<string, unknown>)["code"] === "23505");
+      pgCode === "23505" ||
+      pgCode === 23505 ||
+      pgMessage.includes("unique") ||
+      pgMessage.includes("duplicate");
     if (isUniqueViolation) {
       // Return 200 with ok:true — do not reveal whether the email is registered.
       // This prevents account enumeration via signup (D-07 applies to signup too).
