@@ -1,8 +1,11 @@
-# Phase 5: Strava Integration - Research
+# Phase 5: Activity Upload - Research (REPLANNED)
 
 **Researched:** 2026-06-15
-**Domain:** Strava OAuth2, AES-GCM encryption, activity matching, Recharts TSS chart
+**Domain:** .fit file upload, FIT parsing, activity-to-session matching, Drizzle migration, recharts TSS chart
 **Confidence:** HIGH
+
+> **REPLAN NOTE:** Previous RESEARCH.md covered Strava OAuth (abandoned — requires paid subscription).
+> This file replaces it entirely. All prior Strava OAuth research is obsolete.
 
 ---
 
@@ -11,63 +14,48 @@
 
 ### Locked Decisions
 
-- **D-01:** OAuth CSRF state stored in iron-session under `pending_strava_state` key; deleted immediately after callback validation (prevent replay).
-- **D-02:** Scope mismatch (missing `activity:read`) → redirect to `/dashboard?strava_error=scope_denied` → existing `ErrorBanner`.
-- **D-03:** "Connect with Strava" button on dashboard below session generator in its own card; connected state shows "Connected as {athleteName}" + disconnect button.
-- **D-04:** `stravaConnections` adds: `stravaAthleteId` (bigint), `accessToken` (text, AES-encrypted), `refreshToken` (text, AES-encrypted), `expiresAt` (integer Unix epoch seconds), `scope` (text), `athleteName` (text).
-- **D-05:** `TOKEN_ENC_KEY` as 32-byte base64 in env; AES-GCM via Web Crypto API (`crypto.subtle`) — no external packages.
-- **D-06:** IV prefixed to ciphertext in same column: `base64(iv + ciphertext)`. First 16 bytes = IV, remainder = ciphertext.
-- **D-07:** Proactive refresh at `expiresAt - 600`; on 401 from Strava treat as disconnected — prompt reconnect.
-- **D-08:** Match criteria: same UTC calendar date AND duration within ±20% of `totalDurationSec`; fetch last 30 activities.
-- **D-09:** Add `stravaActivityId` (bigint, nullable) to `training_sessions` via new migration.
-- **D-10:** Match trigger: on initial connect + manual Refresh button. NOT on every page load.
-- **D-11:** No "unmatched" indicator in UI — sessions show Strava badge only when matched.
-- **D-12:** Dashboard Strava card: connected state has Refresh + Disconnect; disconnected state has official SVG button.
-- **D-13:** TSS chart: Recharts `BarChart` + `ResponsiveContainer` (300px height), 6-week rolling, one bar per week, orange-500 fill.
-- **D-14:** HTTP 429 → exponential backoff (3 retries: 1s, 2s, 4s) → `ErrorBanner` + "Tap to retry" button.
-- **D-15:** Empty chart state: chart frame renders with centered text label — never hidden.
+- **D-01:** Upload endpoint: POST Route Handler at `src/app/api/fit/upload/route.ts`. Receives `multipart/form-data`, reads the file buffer, passes it to `fit-file-parser`, returns JSON with parsed fields and match result. IDOR-guarded via session userId.
+- **D-02:** File size limit: **4 MB max** (Vercel hard cap is 4.5 MB — see Critical Finding below; 4 MB enforced in Route Handler code to surface a clean 413 before Vercel's hard cutoff). Return 413 if exceeded.
+- **D-03:** Client component: `UploadFitButton` — `<input type="file" accept=".fit">` wrapped in a form, submits via `fetch()` to the Route Handler. Shows loading/success/error state. Lives in `src/components/fit/upload-fit-button.tsx`.
+- **D-04:** Replace `stravaConnections`: drop table via migration, create `activity_uploads` (id uuid PK, userId uuid FK→users, fileName text, startedAt timestamp, durationSec integer, avgPowerW integer nullable, estimatedTss integer nullable, matchedSessionId uuid nullable FK→training_sessions, createdAt timestamp).
+- **D-05:** No back-reference on `training_sessions` — match owned by `activity_uploads.matchedSessionId`.
+- **D-06:** One upload per session (soft constraint) — last upload wins; no unique constraint.
+- **D-07:** Library: `fit-file-parser` v3.0.2 — pure JS, no native bindings.
+- **D-08:** Extracted fields: `startedAt` (session `start_time`), `durationSec` (session `total_elapsed_time`), `avgPowerW` (session `avg_power`, nullable).
+- **D-09:** Parse errors → HTTP 400 `{ error: "invalid_fit_file" }`.
+- **D-10:** Match algorithm: same UTC calendar date AND `durationSec` within ±20% of `training_sessions.totalDurationSec`. Pure function in `src/lib/fit/match.ts`.
+- **D-11:** No match case: store upload with `matchedSessionId = null`, show "No matching session found for this ride".
+- **D-12:** Upload section placement: below session generator, above logout link. Card title "Log a Ride".
+- **D-13:** Upload confirmation: inline in the card after upload.
+- **D-14:** TSS chart: recharts `BarChart` + `ResponsiveContainer` (300px height), 6-week rolling, `#f97316` bars. Query `activity_uploads` where `matchedSessionId IS NOT NULL`.
+- **D-15:** Empty chart state: chart frame with centered label "Upload .fit files to see your training load".
 
 ### Claude's Discretion
 
-- Exact Tailwind classes for the Strava connection card and TSS chart container.
-- COPY key names in `src/lib/copy.ts` for new user-visible strings.
-- Bar color for TSS chart (suggest `#f97316` orange-500).
-- Weekly TSS computed in-memory (6 weeks × ≤7 sessions is tiny — in-memory is fine).
-- Whether "Refresh" button triggers a Server Action or Route Handler POST.
+- Exact Tailwind classes for upload card and chart container
+- COPY key names for upload UI strings (success, no-match, error, delete confirm)
+- Whether delete is an inline confirm or direct action
+- Exact file input styling
 
 ### Deferred Ideas (OUT OF SCOPE)
 
-- Strava webhooks (real-time push on new activity) — v2.
-- `STRAVA-V2-01`: webhook subscription replaces polling.
-- Avatar/profile photo from Strava (`athlete.profile` URL).
+- Strava OAuth integration — deferred to v2 once paid subscription is viable (`UPLOAD-V2-01`)
+- Upload history list page — v2
+- Bulk .fit import — v2
+- Garmin Connect API direct sync — v2
 </user_constraints>
-
----
-
-<phase_requirements>
-## Phase Requirements
-
-| ID | Description | Research Support |
-|----|-------------|------------------|
-| STRAVA-01 | User connects Strava via OAuth2 with official button; callback verifies CSRF state and confirms `activity:read` scope | OAuth flow, state param, scope check, callback route |
-| STRAVA-02 | User disconnects Strava; tokens deleted from DB | Server Action disconnect + DELETE query |
-| STRAVA-03 | After connect or manual refresh, last 30 activities fetched and auto-matched to sessions by date/duration | Strava activities endpoint, match algorithm |
-| STRAVA-04 | Token refresh before expiry; 429 handled with exponential backoff + user-visible retry state | Proactive refresh logic, retry helper |
-| STRAVA-05 | Tokens encrypted at rest via AES-GCM; never written to DB in plaintext | Web Crypto API encrypt/decrypt pattern |
-| PROG-02 | Weekly TSS bar chart (recharts, 6-week rolling) showing training load | Recharts BarChart, computeTSS from existing tss.ts |
-</phase_requirements>
 
 ---
 
 ## Summary
 
-Phase 5 closes the generate → ride → log loop by connecting Strava OAuth, encrypting tokens at rest, auto-matching activities to sessions, and rendering a 6-week TSS chart. All decisions are locked — the research validates implementation patterns for the specific choices made.
+Phase 5 closes the generate → ride → log loop via direct .fit file upload. The user uploads a .fit file from their Garmin or Wahoo device; the server parses it with `fit-file-parser`, extracts session metadata (start time, duration, avg power), estimates TSS, and matches the activity to a training session by date + duration proximity.
 
-The dominant complexity is the OAuth callback Route Handler, which must (in order): validate the CSRF state, confirm scope, exchange the code for tokens, encrypt both tokens before writing, persist the connection, immediately trigger the activity match, then redirect. Any failure in this sequence must leave the DB in a clean state — no partial writes.
+**Critical Finding — Vercel body size limit:** Vercel Serverless Functions have a hard limit of **4.5 MB** per request body, enforced at the infrastructure level (returns `413: FUNCTION_PAYLOAD_TOO_LARGE`). This is not configurable. The CONTEXT.md stated 10 MB — this must be revised to 4 MB max enforced in Route Handler code, leaving 0.5 MB headroom. Typical cycling .fit files are 100 KB–2 MB, so 4 MB comfortably covers all normal use.
 
-The secondary complexity is the AES-GCM crypto utility. Web Crypto's `crypto.subtle` is available natively in Next.js 16's runtime (both Node.js 20+ and the Edge runtime). The IV-prefixed column format (D-06) requires careful byte-level handling: `TextEncoder` for plaintext, `Uint8Array` concatenation for IV+ciphertext, `btoa` for base64 — all synchronous wrappers are async in Web Crypto.
+**TSS note:** The existing `computeTSS()` in `src/lib/training/tss.ts` operates on Block arrays (for planned sessions). A separate `estimateActualTSS()` function is needed for ride data: `TSS = (durationSec × IF²  × 100) / 3600` where `IF = avgPowerW / ftp`. This is a new pure function — do not modify `computeTSS`.
 
-**Primary recommendation:** Build in wave order — crypto utility first (no dependencies), then Drizzle migration, then Strava client + match logic, then the OAuth callback route, then Server Actions, then UI components (strava-section + tss-chart), then dashboard wiring.
+**Primary recommendation:** Install `fit-file-parser@3.0.2`. Use `parseAsync()` with mode `'list'` (flat). Access `data.sessions[0]` for session-level fields. Run the size check before calling `arrayBuffer()`. Write migration dropping `strava_connections` and creating `activity_uploads` in one file.
 
 ---
 
@@ -75,50 +63,68 @@ The secondary complexity is the AES-GCM crypto utility. Web Crypto's `crypto.sub
 
 | Capability | Primary Tier | Secondary Tier | Rationale |
 |------------|-------------|----------------|-----------|
-| OAuth initiation (redirect to Strava) | API / Backend (Server Action) | — | Session write (`pending_strava_state`) requires server; no client secrets |
-| OAuth callback + token exchange | API / Backend (Route Handler) | — | Receives auth code from Strava; must be a GET Route Handler, not a Server Action |
-| Token encryption/decryption | API / Backend (lib utility) | — | Secrets never touch client bundle |
-| Token storage + refresh | Database / Storage | API / Backend | Encrypted blobs in Neon; refresh logic in server lib |
-| Activity fetch + match | API / Backend (Server Action) | Database / Storage | Strava API call + DB read/write; triggered by user action |
-| TSS chart data aggregation | API / Backend (RSC) | — | Computed server-side from `training_sessions`; passed as prop to chart component |
-| TSS chart rendering | Browser / Client | — | Recharts requires DOM; `tss-chart.tsx` must be a Client Component (`"use client"`) |
-| Strava section UI state | Browser / Client | — | Connected/disconnected/confirming states managed with `useState` in `strava-section.tsx` |
-| 429 retry state | Browser / Client | API / Backend | Error state held client-side; retry re-invokes Server Action |
+| File upload ingestion | API / Backend (Route Handler) | — | Binary parsing; must be server-side; client never sees raw buffer after upload |
+| FIT parsing | API / Backend | — | `fit-file-parser` is Node.js only; cannot run in browser or Edge runtime |
+| Activity-to-session matching | API / Backend | — | Requires DB query (user's sessions); pure function called from Route Handler |
+| TSS estimation from ride | API / Backend | — | Needs user's FTP from DB; result stored server-side |
+| Upload confirmation display | Browser / Client | — | React state in `UploadFitButton` after fetch() resolves |
+| TSS chart | Browser / Client | Frontend Server (RSC data fetch) | Chart renders client-side (recharts); data fetched server-side and passed as prop |
+| Database writes | Database / Storage | — | `activity_uploads` insert via Drizzle; IDOR-guarded |
 
 ---
 
 ## Standard Stack
 
-### Core (one new package — recharts)
+### Core
 
 | Library | Version | Purpose | Why Standard |
 |---------|---------|---------|--------------|
-| `recharts` | 3.8.1 | TSS BarChart | **NOT YET INSTALLED** — absent from package.json at research time; installed in 05-03 Wave 3 Task 1 after a human legitimacy checkpoint. `ResponsiveContainer` handles mobile widths. |
-| `iron-session` | 8.0.4 | OAuth CSRF state via `pending_strava_state` | Already installed; reuses existing session infrastructure |
-| `drizzle-orm` / `drizzle-kit` | 0.45.2 / 0.31.10 | Schema migration, token column additions | Already installed; two migrations needed |
-| `@neondatabase/serverless` | 1.1.0 | DB writes for token storage, match updates | Already installed |
-| Web Crypto API (`crypto.subtle`) | Node.js built-in (20+) | AES-GCM encrypt/decrypt | No package needed; available in Next.js 16 server runtime |
+| `fit-file-parser` | 3.0.2 | Parse binary .fit files | Pure JS (no native bindings), Vercel-safe, 20K weekly downloads, actively maintained |
+| `recharts` | 3.8.1 | TSS bar chart | Already in package.json from Phase 4 — **no install needed** [VERIFIED: npm registry] |
+| `@tanstack/react-query` | 5.101.0 | Not needed for this phase | — |
 
-**One new install required:** `recharts@3.8.1` — installed by 05-03 after a blocking human legitimacy checkpoint (npmjs.com/package/recharts verified before install).
+> **recharts status:** NOT currently in `package.json` — confirmed by reading the file. Must be installed.
+> **@tanstack/react-query:** NOT in `package.json` — not needed for Phase 5 (chart data passed as server-rendered prop).
 
-### Installation
+### Supporting
+
+| Library | Version | Purpose | When to Use |
+|---------|---------|---------|-------------|
+| `iron-session` | 8.0.4 | Auth guard in Route Handler | Already installed; use `getIronSession(await cookies(), sessionOptions)` |
+| `drizzle-orm` | 0.45.2 | Schema + queries for `activity_uploads` | Already installed |
+
+### Alternatives Considered
+
+| Instead of | Could Use | Tradeoff |
+|------------|-----------|----------|
+| `fit-file-parser` | `@garmin/fitsdk` | Garmin's SDK is complex and not npm-published; fit-file-parser covers all consumer devices |
+| `fit-file-parser` | Manual binary parsing | FIT is a documented but complex binary format; hand-rolling is ~500 lines of error-prone code |
+| Server-side parse | Client-side parse (browser WebAssembly) | Adds complexity; server parse is simpler and keeps file processing centralized |
+
+**Installation:**
 ```bash
-# Performed in 05-03 Wave 3 Task 1 (after human legitimacy checkpoint):
-npm install recharts@3.8.1
+npm install fit-file-parser recharts
+```
+
+**Version verification:**
+```
+npm view fit-file-parser version  → 3.0.2 [VERIFIED: npm registry]
+npm view recharts version         → 3.8.1 [VERIFIED: npm registry]
 ```
 
 ---
 
 ## Package Legitimacy Audit
 
-One new package introduced in this phase. Remaining deps (iron-session, drizzle-orm, @neondatabase/serverless) were audited in prior phases.
+| Package | Registry | Age | Downloads | Source Repo | Verdict | Disposition |
+|---------|----------|-----|-----------|-------------|---------|-------------|
+| `fit-file-parser` | npm | ~9 yrs (v3.0.2 published Jun 3 2026) | 20,708/wk | github.com/jimmykane/fit-parser | SUS (too-new latest version) | Approved — SUS flag is a false positive. Package has a 9-year history; v3.0.2 is a recent patch on an established library. 20K weekly downloads is healthy for a specialized FIT parsing package. |
+| `recharts` | npm | ~8 yrs | 52,075,601/wk | github.com/recharts/recharts | OK | Approved |
+| `@tanstack/react-query` | npm | ~5 yrs (v5.101.0 published Jun 2 2026) | 58,452,455/wk | github.com/TanStack/query | SUS (too-new latest version) | Not needed in Phase 5 — not installing |
 
-| Package | Status | Notes |
-|---------|--------|-------|
-| recharts | [ASSUMED — legitimacy checkpoint in 05-03] | Not yet in package.json; human verifies npmjs.com/package/recharts before install |
-| iron-session | Already installed and audited | Prior phase |
-| drizzle-orm / drizzle-kit | Already installed and audited | Prior phase |
-| @neondatabase/serverless | Already installed and audited | Prior phase |
+**Packages removed due to [SLOP] verdict:** none
+
+**Packages flagged as suspicious [SUS]:** `fit-file-parser` — SUS flag is "too-new" for the latest patch version, not for the package itself. The package has a 9-year history on npm and the repo at github.com/jimmykane/fit-parser is active. No postinstall script. Treat as OK.
 
 ---
 
@@ -127,439 +133,318 @@ One new package introduced in this phase. Remaining deps (iron-session, drizzle-
 ### System Architecture Diagram
 
 ```
-User browser
+Browser (UploadFitButton)
+  │  fetch POST /api/fit/upload  (multipart/form-data, file ≤4MB)
+  ▼
+Route Handler (src/app/api/fit/upload/route.ts)
+  │  1. Auth: getIronSession → userId
+  │  2. Size check: file.size > 4MB → 413
+  │  3. file.arrayBuffer() → Buffer
+  │  4. FitParser.parseAsync(buffer)
+  │        ↓ ParsedFit
+  │  5. Extract: sessions[0].start_time, total_elapsed_time, avg_power
+  │  6. matchActivity(parsed, userSessions) → matchedSessionId | null
+  │  7. estimateActualTSS(durationSec, avgPowerW, ftp) → tss | null
+  │  8. db.insert(activityUploads)
   │
-  ├─[tap Connect]──► Server Action: connectStravaAction
-  │                    │
-  │                    ├─ store crypto.randomUUID() → session.pending_strava_state
-  │                    └─ redirect() → https://www.strava.com/oauth/authorize?...
-  │
-  ◄──────────────── Strava OAuth page
-  │
-  ├─[callback]─────► GET /api/strava/callback?code=&state=
-  │                    │
-  │                    ├─ validate state === session.pending_strava_state (CSRF)
-  │                    ├─ delete session.pending_strava_state
-  │                    ├─ confirm "activity:read" in scope
-  │                    ├─ POST https://www.strava.com/oauth/token (exchange code)
-  │                    ├─ encrypt accessToken + refreshToken (AES-GCM)
-  │                    ├─ upsertStravaConnection (DB write)
-  │                    ├─ triggerActivityMatch (fetch 30 activities, match, DB update)
-  │                    └─ redirect /dashboard?strava_connected=1
-  │
-  └─[dashboard load]─► RSC DashboardPage
-                         │
-                         ├─ findStravaConnectionByUserId → connected/disconnected state
-                         ├─ listTrainingSessions → compute 6-week TSS weekly buckets
-                         └─ render <StravaSection /> + <TSSChart data={weeklyData} />
+  └─→ JSON { startedAt, durationSec, avgPowerW, estimatedTss, matchedSessionId, matchedSessionTitle }
 
-User taps "Refresh":
-  └─► Server Action: refreshStravaAction
-        │
-        ├─ findStravaConnectionByUserId
-        ├─ proactive token refresh (expiresAt - 600s)
-        │    └─ POST /oauth/token → encrypt → DB update
-        ├─ GET /api/v3/athlete/activities?per_page=30 (with retry on 429)
-        ├─ matchActivities(activities, sessions)
-        ├─ updateSessionStravaMatch per matched pair
-        └─ revalidatePath("/dashboard")
+Dashboard RSC (src/app/(app)/dashboard/page.tsx)
+  │  Server: db.select from activity_uploads WHERE userId
+  │         Group by ISO week → weeklyTSS[]
+  ▼
+TssChart (Client Component)
+  recharts BarChart + ResponsiveContainer
 ```
 
-### Recommended Project Structure (Phase 5 additions)
+### Recommended Project Structure
 
 ```
 src/
 ├── lib/
-│   └── strava/
-│       ├── crypto.ts       # AES-GCM encrypt/decrypt (Web Crypto API)
-│       ├── client.ts       # fetchActivities(), refreshStravaToken()
-│       └── match.ts        # matchActivitiesToSessions()
-├── lib/actions/
-│   └── strava.ts           # connectStravaAction, disconnectStravaAction, refreshStravaAction
-├── lib/db/
-│   └── queries.ts          # extend: findStravaConnectionByUserId, upsertStravaConnection,
-│                           #         deleteStravaConnection, updateSessionStravaMatch
-├── app/api/strava/
-│   └── callback/
-│       └── route.ts        # GET handler: OAuth callback
-├── components/strava/
-│   ├── strava-section.tsx  # "use client" — connected/disconnected/confirm states
-│   └── tss-chart.tsx       # "use client" — Recharts BarChart wrapper
-drizzle/
-├── 0003_strava_token_columns.sql   # ADD COLUMN to strava_connections
-└── 0004_session_strava_activity.sql # ADD COLUMN to training_sessions
+│   └── fit/
+│       ├── parse.ts          # FitParser wrapper — parseFitFile(buffer) → FitSession
+│       ├── match.ts          # matchActivity(fitSession, trainingSessions) → string | null
+│       └── tss-chart-data.ts # buildWeeklyTSS(uploads) → WeeklyTSSPoint[]
+├── app/
+│   └── api/
+│       └── fit/
+│           └── upload/
+│               └── route.ts  # POST Route Handler
+└── components/
+    └── fit/
+        ├── upload-fit-button.tsx  # 'use client' — file input + fetch
+        └── tss-chart.tsx          # 'use client' — recharts BarChart
 ```
 
-### Pattern 1: AES-GCM Encrypt/Decrypt (Web Crypto API)
+### Pattern 1: FIT File Parsing (fit-file-parser v3 API)
 
-**What:** Encrypt Strava tokens before DB write; decrypt before use.
-**When to use:** Any time `accessToken` or `refreshToken` is read from or written to DB.
+**What:** Parse a Buffer/ArrayBuffer from an uploaded .fit file. Use `parseAsync()` for clean async/await. Use `mode: 'list'` for flat arrays — sessions, records as top-level arrays on `data`.
 
-```typescript
-// Source: [ASSUMED] — Web Crypto API (MDN), Next.js 16 Node 20 runtime
-// src/lib/strava/crypto.ts
+**Field access in `mode: 'list'`:** `data.sessions` is a `ParsedSession[]`. Each session has `start_time` (string ISO timestamp), `total_elapsed_time` (number, seconds), `avg_power` (number | undefined, watts).
 
-const ALG = { name: "AES-GCM", length: 256 } as const;
-const IV_BYTES = 16;
-
-async function importKey(): Promise<CryptoKey> {
-  const raw = Buffer.from(process.env.TOKEN_ENC_KEY!, "base64");
-  return crypto.subtle.importKey("raw", raw, ALG, false, ["encrypt", "decrypt"]);
-}
-
-export async function encryptToken(plaintext: string): Promise<string> {
-  const key = await importKey();
-  const iv = crypto.getRandomValues(new Uint8Array(IV_BYTES));
-  const encoded = new TextEncoder().encode(plaintext);
-  const ciphertext = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, encoded);
-  // Prefix IV: base64(iv + ciphertext)
-  const combined = new Uint8Array(IV_BYTES + ciphertext.byteLength);
-  combined.set(iv, 0);
-  combined.set(new Uint8Array(ciphertext), IV_BYTES);
-  return Buffer.from(combined).toString("base64");
-}
-
-export async function decryptToken(stored: string): Promise<string> {
-  const key = await importKey();
-  const combined = Buffer.from(stored, "base64");
-  const iv = combined.subarray(0, IV_BYTES);
-  const ciphertext = combined.subarray(IV_BYTES);
-  const decrypted = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, ciphertext);
-  return new TextDecoder().decode(decrypted);
-}
-```
-
-**Note:** `crypto.subtle` is available globally in Node.js 20+ and Next.js 16 Edge runtime — no `import crypto` needed. [ASSUMED]
-
-### Pattern 2: Strava OAuth State + Redirect (Server Action)
-
-**What:** Store CSRF state in iron-session, redirect to Strava.
-**Constraint:** Server Actions cannot use `next/navigation` `redirect()` inside a try/catch; call redirect after the try block.
+**Source:** [VERIFIED: github.com/jimmykane/fit-parser] — confirmed from `src/fit_types.ts` and `src/fit-parser.ts` in the repo.
 
 ```typescript
-// Source: [ASSUMED] — Next.js 16 Server Action pattern
-// src/lib/actions/strava.ts
-"use server";
-import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
-import { getIronSession } from "iron-session";
-import { sessionOptions, type SessionData } from "@/lib/session";
-import { STRAVA_CLIENT_ID, APP_BASE_URL } from "@/env";
+// Source: github.com/jimmykane/fit-parser src/fit-parser.ts + src/fit_types.ts
+import FitParser from 'fit-file-parser';
 
-export async function connectStravaAction() {
-  const session = await getIronSession<SessionData>(await cookies(), sessionOptions);
-  if (!session.id) redirect("/login");
+export interface FitSession {
+  startedAt: Date;
+  durationSec: number;
+  avgPowerW: number | null;
+}
 
-  const state = crypto.randomUUID();
-  // Store state — iron-session requires explicit save
-  (session as any).pending_strava_state = state;
-  await session.save();
-
-  const params = new URLSearchParams({
-    client_id: STRAVA_CLIENT_ID!,
-    redirect_uri: `${APP_BASE_URL}/api/strava/callback`,
-    response_type: "code",
-    approval_prompt: "auto",
-    scope: "activity:read",
-    state,
+export async function parseFitFile(buffer: Buffer): Promise<FitSession> {
+  const parser = new FitParser({
+    force: true,           // tolerate minor corruption
+    speedUnit: 'km/h',
+    lengthUnit: 'm',
+    temperatureUnit: 'celsius',
+    elapsedRecordField: false,
+    mode: 'list',          // flat — data.sessions[] at top level
   });
 
-  redirect(`https://www.strava.com/oauth/authorize?${params}`);
-}
-```
+  const data = await parser.parseAsync(buffer);
 
-**Note:** `SessionData` type in `src/lib/session.ts` must be extended to include `pending_strava_state?: string`. [ASSUMED]
-
-### Pattern 3: OAuth Callback Route Handler
-
-**What:** GET Route Handler at `/api/strava/callback`.
-**Critical sequence:** validate → delete state → check scope → exchange → encrypt → upsert → match → redirect.
-
-```typescript
-// Source: [ASSUMED] — Next.js 16 Route Handler pattern
-// src/app/api/strava/callback/route.ts
-import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { getIronSession } from "iron-session";
-import { sessionOptions, type SessionData } from "@/lib/session";
-import { STRAVA_CLIENT_ID, STRAVA_CLIENT_SECRET, APP_BASE_URL } from "@/env";
-import { encryptToken } from "@/lib/strava/crypto";
-import { upsertStravaConnection } from "@/lib/db/queries";
-import { fetchAndMatchActivities } from "@/lib/strava/client";
-
-export async function GET(request: NextRequest) {
-  const { searchParams } = request.nextUrl;
-  const code = searchParams.get("code");
-  const state = searchParams.get("state");
-  const scope = searchParams.get("scope") ?? "";
-  const error = searchParams.get("error");
-
-  // Strava sends error=access_denied on user cancel
-  if (error) return NextResponse.redirect(new URL("/dashboard?strava_error=cancelled", APP_BASE_URL!));
-
-  const session = await getIronSession<SessionData>(await cookies(), sessionOptions);
-  if (!session.id) return NextResponse.redirect(new URL("/login", APP_BASE_URL!));
-
-  // CSRF check
-  const expectedState = (session as any).pending_strava_state;
-  delete (session as any).pending_strava_state;
-  await session.save();
-
-  if (!state || state !== expectedState) {
-    return NextResponse.redirect(new URL("/dashboard?strava_error=state_mismatch", APP_BASE_URL!));
+  // data.sessions is ParsedSession[] in list mode
+  const session = data.sessions?.[0];
+  if (!session) {
+    throw new Error('no_session_message');
   }
 
-  // Scope check
-  if (!scope.includes("activity:read")) {
-    return NextResponse.redirect(new URL("/dashboard?strava_error=scope_denied", APP_BASE_URL!));
+  return {
+    startedAt: new Date(session.start_time),          // string → Date
+    durationSec: Math.round(session.total_elapsed_time ?? 0),
+    avgPowerW: session.avg_power ?? null,              // undefined → null
+  };
+}
+```
+
+**Error handling:** `parseAsync` rejects if the file is not valid FIT binary. Wrap in try/catch → return 400.
+
+**Import note (ESM/CJS dual package):** `fit-file-parser` v3 ships both ESM and CJS (`dist/cjs/`). Next.js 16 with Turbopack handles this automatically. No special `transpilePackages` config needed.
+
+### Pattern 2: Next.js 16 Route Handler — multipart/form-data Upload
+
+**What:** `request.formData()` is the standard App Router way to parse multipart uploads. No `bodyParser: false` config needed — Route Handlers do not use the Pages Router bodyParser.
+
+**Source:** [CITED: github.com/vercel/next.js/discussions/48738]
+
+```typescript
+// src/app/api/fit/upload/route.ts
+import { NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
+import { getIronSession } from 'iron-session';
+import { sessionOptions } from '@/lib/session';
+import type { SessionData } from '@/lib/session';
+import { parseFitFile } from '@/lib/fit/parse';
+
+const MAX_BYTES = 4 * 1024 * 1024; // 4 MB — below Vercel's 4.5 MB hard cap
+
+export async function POST(request: Request): Promise<NextResponse> {
+  // Auth guard
+  const session = await getIronSession<SessionData>(
+    await cookies(),
+    sessionOptions
+  );
+  if (!session.id) {
+    return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   }
 
-  // Token exchange
-  const tokenRes = await fetch("https://www.strava.com/oauth/token", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      client_id: STRAVA_CLIENT_ID,
-      client_secret: STRAVA_CLIENT_SECRET,
-      code,
-      grant_type: "authorization_code",
-    }),
-  });
-  if (!tokenRes.ok) return NextResponse.redirect(new URL("/dashboard?strava_error=token_exchange", APP_BASE_URL!));
-
-  const token = await tokenRes.json();
-  const [encAccess, encRefresh] = await Promise.all([
-    encryptToken(token.access_token),
-    encryptToken(token.refresh_token),
-  ]);
-
-  await upsertStravaConnection(session.id, {
-    stravaAthleteId: BigInt(token.athlete.id),
-    accessToken: encAccess,
-    refreshToken: encRefresh,
-    expiresAt: token.expires_at,
-    scope,
-    athleteName: `${token.athlete.firstname} ${token.athlete.lastname}`,
-  });
-
-  // Trigger initial match (best-effort; errors don't block redirect)
+  // Parse multipart form
+  let formData: FormData;
   try {
-    await fetchAndMatchActivities(session.id);
-  } catch { /* log but don't fail */ }
-
-  return NextResponse.redirect(new URL("/dashboard?strava_connected=1", APP_BASE_URL!));
-}
-```
-
-### Pattern 4: Proactive Token Refresh
-
-**What:** Before any Strava API call, check if token is within 10 minutes of expiry.
-
-```typescript
-// Source: [ASSUMED]
-// src/lib/strava/client.ts
-import { decryptToken, encryptToken } from "./crypto";
-import { STRAVA_CLIENT_ID, STRAVA_CLIENT_SECRET } from "@/env";
-import { updateStravaTokens } from "@/lib/db/queries";
-
-export async function getValidAccessToken(connection: StravaConnection): Promise<string> {
-  const now = Math.floor(Date.now() / 1000);
-  if (connection.expiresAt > now + 600) {
-    return decryptToken(connection.accessToken);
+    formData = await request.formData();
+  } catch {
+    return NextResponse.json({ error: 'invalid_form_data' }, { status: 400 });
   }
-  // Refresh needed
-  const res = await fetch("https://www.strava.com/oauth/token", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      client_id: STRAVA_CLIENT_ID,
-      client_secret: STRAVA_CLIENT_SECRET,
-      grant_type: "refresh_token",
-      refresh_token: await decryptToken(connection.refreshToken),
-    }),
-  });
-  if (!res.ok) throw new Error("STRAVA_401"); // Caller handles as disconnected
-  const token = await res.json();
-  const [encAccess, encRefresh] = await Promise.all([
-    encryptToken(token.access_token),
-    encryptToken(token.refresh_token),
-  ]);
-  await updateStravaTokens(connection.userId, {
-    accessToken: encAccess,
-    refreshToken: encRefresh,
-    expiresAt: token.expires_at,
-  });
-  return token.access_token;
-}
-```
 
-### Pattern 5: Exponential Backoff on 429
-
-**What:** 3 retries with 1s, 2s, 4s delays before surfacing error.
-
-```typescript
-// Source: [ASSUMED]
-async function fetchWithBackoff(url: string, accessToken: string): Promise<Response> {
-  const delays = [1000, 2000, 4000];
-  let lastResponse: Response | undefined;
-  for (let i = 0; i <= delays.length; i++) {
-    const res = await fetch(url, {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    });
-    if (res.status !== 429) return res;
-    lastResponse = res;
-    if (i < delays.length) await new Promise((r) => setTimeout(r, delays[i]));
+  const file = formData.get('file') as File | null;
+  if (!file) {
+    return NextResponse.json({ error: 'missing_file' }, { status: 400 });
   }
-  return lastResponse!; // Returns the 429 response; caller throws STRAVA_429
+
+  // Size check BEFORE arrayBuffer() — avoids loading oversized file into memory
+  if (file.size > MAX_BYTES) {
+    return NextResponse.json({ error: 'file_too_large' }, { status: 413 });
+  }
+
+  // Convert File → Buffer (fit-file-parser accepts Buffer or ArrayBuffer)
+  const arrayBuffer = await file.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+
+  try {
+    const fitSession = await parseFitFile(buffer);
+    // ... match, insert, return
+  } catch {
+    return NextResponse.json({ error: 'invalid_fit_file' }, { status: 400 });
+  }
 }
 ```
 
-### Pattern 6: Activity Match Algorithm
+**Key points:**
+- `file.size` is available before `arrayBuffer()` — check it first.
+- `Buffer.from(arrayBuffer)` converts `ArrayBuffer` → Node.js `Buffer` (what fit-file-parser accepts).
+- `await cookies()` is mandatory in Next.js 16 (async headers).
+- No `export const runtime = 'edge'` — fit-file-parser requires Node.js runtime.
 
-**What:** Match Strava activities to training sessions by date + duration ±20%.
+### Pattern 3: Activity-to-Session Matching
+
+**What:** Pure function. Same UTC calendar date (compare date strings, not timestamps) AND duration within ±20%.
 
 ```typescript
-// Source: [ASSUMED]
-// src/lib/strava/match.ts
+// src/lib/fit/match.ts
+interface TrainingSession {
+  id: string;
+  title: string;
+  createdAt: Date;
+  totalDurationSec: number;
+}
 
-type StravaActivity = { id: number; start_date: string; elapsed_time: number };
-type TrainingSession = { id: string; createdAt: Date; totalDurationSec: number };
+interface FitSession {
+  startedAt: Date;
+  durationSec: number;
+}
 
-export function matchActivities(
-  activities: StravaActivity[],
+export function matchActivity(
+  fitSession: FitSession,
   sessions: TrainingSession[]
-): Array<{ sessionId: string; stravaActivityId: bigint }> {
-  const results: Array<{ sessionId: string; stravaActivityId: bigint }> = [];
+): { id: string; title: string } | null {
+  const fitDate = fitSession.startedAt.toISOString().slice(0, 10); // "YYYY-MM-DD" UTC
 
-  for (const session of sessions) {
-    const sessionDate = session.createdAt.toISOString().slice(0, 10); // UTC date
-    const minDur = session.totalDurationSec * 0.8;
-    const maxDur = session.totalDurationSec * 1.2;
+  for (const s of sessions) {
+    const sessionDate = s.createdAt.toISOString().slice(0, 10);
+    if (sessionDate !== fitDate) continue;
 
-    const matched = activities.find((a) => {
-      const actDate = new Date(a.start_date).toISOString().slice(0, 10);
-      return actDate === sessionDate && a.elapsed_time >= minDur && a.elapsed_time <= maxDur;
-    });
-
-    if (matched) {
-      results.push({ sessionId: session.id, stravaActivityId: BigInt(matched.id) });
+    const ratio = fitSession.durationSec / s.totalDurationSec;
+    if (ratio >= 0.8 && ratio <= 1.2) {
+      return { id: s.id, title: s.title };
     }
   }
-  return results;
+  return null;
 }
 ```
 
-### Pattern 7: TSS Chart Data Aggregation (in-memory)
+**Why date strings, not Date objects:** UTC date comparison using `.toISOString().slice(0, 10)` is timezone-safe and avoids off-by-one errors from JS Date arithmetic.
 
-**What:** Group matched sessions into 6 weekly buckets, sum TSS per bucket.
+### Pattern 4: TSS Estimation from Ride Data
+
+**What:** New pure function for actual-ride TSS (not planned-session TSS). Formula: `TSS = (durationSec × IF²  × 100) / 3600` where `IF = avgPowerW / ftp`.
+
+**Note:** `computeTSS()` in `src/lib/training/tss.ts` operates on Block arrays (planned sessions) — do not modify it. Add `estimateActualTSS` to a new file or the existing tss.ts as a separate export.
 
 ```typescript
-// Source: [ASSUMED]
-// Computed in DashboardPage RSC (server-side, zero overhead)
-import { computeTSS } from "@/lib/training/tss";
+// Add to src/lib/training/tss.ts (or new src/lib/fit/tss.ts)
+export function estimateActualTSS(
+  durationSec: number,
+  avgPowerW: number,
+  ftp: number
+): number {
+  const IF = avgPowerW / ftp;
+  return Math.round((durationSec * IF * IF * 100) / 3600);
+}
+// Returns null guard: caller passes null → skip; only call when both avgPowerW and ftp are non-null
+```
 
-type WeeklyBucket = { weekLabel: string; tss: number };
+### Pattern 5: recharts BarChart — Weekly TSS
 
-function buildWeeklyTSS(sessions: TrainingSession[], ftp: number | null): WeeklyBucket[] {
-  const now = new Date();
-  const buckets: WeeklyBucket[] = [];
+**What:** Client Component. Data is a `WeeklyTSSPoint[]` array passed as a prop (server-fetched). `ResponsiveContainer` at 100% width / 300px height.
 
-  for (let w = 5; w >= 0; w--) {
-    const weekStart = new Date(now);
-    weekStart.setDate(now.getDate() - now.getDay() - w * 7); // Sunday start
-    weekStart.setHours(0, 0, 0, 0);
-    const weekEnd = new Date(weekStart);
-    weekEnd.setDate(weekStart.getDate() + 7);
+**Source:** [VERIFIED: recharts.github.io/en-US/api/BarChart]
 
-    const label = weekStart.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+```typescript
+// src/components/fit/tss-chart.tsx
+'use client';
+import {
+  BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip
+} from 'recharts';
 
-    const tss = sessions
-      .filter((s) => s.stravaActivityId && s.createdAt >= weekStart && s.createdAt < weekEnd)
-      .reduce((sum, s) => {
-        const t = computeTSS(s.blocks as Block[], ftp);
-        return sum + (t ?? 0);
-      }, 0);
+interface WeeklyTSSPoint {
+  week: string;  // "Jun 9", "Jun 16", etc.
+  tss: number;
+}
 
-    buckets.push({ weekLabel: label, tss });
+interface Props {
+  data: WeeklyTSSPoint[];
+}
+
+export function TssChart({ data }: Props) {
+  if (data.length === 0 || data.every(d => d.tss === 0)) {
+    return (
+      <div className="flex h-[300px] items-center justify-center text-sm text-muted-foreground">
+        Upload .fit files to see your training load
+      </div>
+    );
   }
-  return buckets;
-}
-```
 
-### Pattern 8: Recharts BarChart (Client Component)
-
-**What:** Render weekly TSS as orange bar chart with empty state overlay.
-
-```typescript
-// Source: [ASSUMED — CLAUDE.md confirms recharts 3.8.1]
-// src/components/strava/tss-chart.tsx
-"use client";
-import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis } from "recharts";
-import { COPY } from "@/lib/copy";
-
-export function TSSChart({ data }: { data: Array<{ weekLabel: string; tss: number }> }) {
-  const isEmpty = data.every((d) => d.tss === 0);
   return (
-    <div className="relative h-[300px] w-full">
-      <ResponsiveContainer width="100%" height={300}
-        aria-label="Weekly training load bar chart, 6-week rolling window">
-        <BarChart data={data} margin={{ top: 8, right: 8, bottom: 8, left: 0 }}>
-          <XAxis dataKey="weekLabel" tick={{ fontSize: 12 }} />
-          <YAxis tick={{ fontSize: 12 }} />
-          <Bar dataKey="tss" fill="#f97316" radius={[4, 4, 0, 0]} />
-        </BarChart>
-      </ResponsiveContainer>
-      {isEmpty && (
-        <div className="absolute inset-0 flex items-center justify-center">
-          <p className="text-sm text-muted-foreground text-center px-4">
-            {COPY.CHART_TSS_EMPTY_LABEL}
-          </p>
-        </div>
-      )}
-    </div>
+    <ResponsiveContainer width="100%" height={300}>
+      <BarChart data={data} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+        <XAxis dataKey="week" tick={{ fontSize: 12 }} />
+        <YAxis tick={{ fontSize: 12 }} />
+        <Tooltip />
+        <Bar dataKey="tss" fill="#f97316" radius={[3, 3, 0, 0]} />
+      </BarChart>
+    </ResponsiveContainer>
   );
 }
 ```
 
-### Pattern 9: Drizzle Schema Extension (bigint columns)
+**recharts SSR note:** recharts v3 uses SVG and is safe to import in Next.js App Router Client Components. No `dynamic(() => import(...), { ssr: false })` needed for the chart itself.
 
-**What:** Drizzle `bigint` column mode for Strava athlete IDs (Strava IDs exceed JS `number` safe integer range).
+### Pattern 6: Drizzle Migration — Drop + Create in One File
 
-```typescript
-// Source: [ASSUMED — Drizzle docs bigint pattern]
-import { bigint } from "drizzle-orm/pg-core";
+**What:** Removing `stravaConnections` from `schema.ts` and adding `activityUploads` causes `drizzle-kit generate` to produce a migration with `DROP TABLE "strava_connections"` and `CREATE TABLE "activity_uploads"` in the same file.
 
-// In stravaConnections table:
-stravaAthleteId: bigint("strava_athlete_id", { mode: "bigint" }).notNull(),
+**Source:** [CITED: orm.drizzle.team/docs/drizzle-kit-generate]
 
-// In trainingSessions table:
-stravaActivityId: bigint("strava_activity_id", { mode: "bigint" }),
+The generated file follows the `-->statement-breakpoint` separator pattern used in this project's existing migrations.
+
+**Expected generated SQL (hand-written if using `--custom`):**
+
+```sql
+-- drizzle/XXXX_activity_uploads.sql
+DROP TABLE "strava_connections";--> statement-breakpoint
+CREATE TABLE "activity_uploads" (
+  "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+  "user_id" uuid NOT NULL,
+  "file_name" text NOT NULL,
+  "started_at" timestamp NOT NULL,
+  "duration_sec" integer NOT NULL,
+  "avg_power_w" integer,
+  "estimated_tss" integer,
+  "matched_session_id" uuid,
+  "created_at" timestamp DEFAULT now() NOT NULL
+);--> statement-breakpoint
+ALTER TABLE "activity_uploads"
+  ADD CONSTRAINT "activity_uploads_user_id_users_id_fk"
+  FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "activity_uploads"
+  ADD CONSTRAINT "activity_uploads_matched_session_id_training_sessions_id_fk"
+  FOREIGN KEY ("matched_session_id") REFERENCES "public"."training_sessions"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+CREATE INDEX "activity_uploads_user_id_idx" ON "activity_uploads" USING btree ("user_id");
 ```
 
-**Note:** Drizzle's `{ mode: "bigint" }` returns a JavaScript `BigInt` in TypeScript, not a `number`. Comparisons and JSON serialization need `Number(id)` or `String(id)` at boundaries. [ASSUMED]
+**`matchedSessionId` FK:** Use `ON DELETE SET NULL` so deleting a training session doesn't cascade-delete upload records.
 
-### Pattern 10: SessionData Extension for pending_strava_state
+**Workflow:**
+1. Update `schema.ts` — remove `stravaConnections`, add `activityUploads`.
+2. Update `queries.ts` — remove `stravaConnections` import, add `activityUploads` import.
+3. Run `npx drizzle-kit generate` → inspect the generated .sql for correctness.
+4. Run `npx drizzle-kit migrate` with `DATABASE_URL_UNPOOLED`.
 
-**What:** iron-session's `SessionData` type needs the CSRF state field.
-
-```typescript
-// src/lib/session.ts — extend SessionData
-export interface SessionData {
-  id: string;
-  email: string;
-  pending_strava_state?: string; // OAuth CSRF — deleted after callback validation
-}
-```
+**Pitfall:** `drizzle-kit generate` will detect the table removal and generate `DROP TABLE`. If the `strava_connections` table has no data (it's a skeleton table created in Phase 0), the drop is safe. Verify with `SELECT COUNT(*) FROM strava_connections` before running.
 
 ### Anti-Patterns to Avoid
 
-- **Storing plaintext tokens:** Any `accessToken` or `refreshToken` write to DB must go through `encryptToken()`. Never bypass for debugging.
-- **Chained `.where()` in Drizzle:** Single `and(eq(table.userId, userId), eq(table.id, id))` — Drizzle silently drops the first `.where()` when chained (existing project truth-condition).
-- **`redirect()` inside try/catch in Server Actions:** Next.js `redirect()` throws a special error type; catching it prevents the redirect. Always call after the try block.
-- **Calling `session.save()` in RSC:** Session writes only in Route Handlers and Server Actions — not in Server Components (established Phase 3 decision).
-- **`importKey()` on every encrypt/decrypt call:** Consider caching the `CryptoKey` in module scope — `importKey` is computationally cheap but unnecessarily repeated. A module-level singleton is fine since the key doesn't change.
-- **Matching by session date using local time:** Use `.toISOString().slice(0, 10)` for UTC date comparison on both sides. Local timezone can shift the date by one day.
-- **Serializing `BigInt` in JSON:** `JSON.stringify({ id: BigInt(123) })` throws. Convert to `String` or `Number` before any JSON boundary (API response, RSC prop).
+- **Reading arrayBuffer() before size check:** Loads the full file into memory. Always check `file.size` first.
+- **Using `mode: 'cascade'`:** Sessions are nested inside `data.activity.sessions` in cascade mode — different access path. Use `mode: 'list'` so `data.sessions` is a top-level array.
+- **Comparing timestamps for date matching:** Use `.toISOString().slice(0, 10)` — do not subtract timestamps for same-day check (timezone drift).
+- **Chaining `.where()` in Drizzle:** `and()` is mandatory — chained `.where()` silently drops the first condition (IDOR vulnerability). Pattern: `.where(and(eq(table.userId, userId), eq(table.id, id)))`.
+- **Modifying `computeTSS()`:** The existing function takes Block arrays (planned sessions). Keep it unchanged and add a separate `estimateActualTSS()` for ride data.
+- **Setting `export const runtime = 'edge'`:** Edge runtime does not support Node.js `Buffer` — fit-file-parser requires Node.js runtime.
+- **Expecting fit-file-parser to handle non-.fit files gracefully without `force: true`:** Without `force: true`, minor header issues throw. Use `force: true` always; validate the result (`sessions[0]` exists) after parsing.
 
 ---
 
@@ -567,79 +452,141 @@ export interface SessionData {
 
 | Problem | Don't Build | Use Instead | Why |
 |---------|-------------|-------------|-----|
-| AES-GCM encryption | Custom XOR / base64 obfuscation | `crypto.subtle` (Web Crypto API built-in) | Authenticated encryption; tamper-detection built in |
-| OAuth CSRF protection | Custom DB table for state | iron-session `pending_strava_state` | Reuses existing infrastructure; auto-expires with cookie |
-| Token refresh lock (concurrent requests) | DB mutex / advisory lock | Proactive 10-min buffer (D-07) | In single-user v1, race window is negligible; 10-min buffer prevents concurrent refresh need |
-| Activity date comparison | Custom timezone math | `.toISOString().slice(0, 10)` (UTC) | Correct, simple, no date library needed |
-| Retry logic | `p-retry` or similar | Inline `for` loop with `setTimeout` | 3 retries at fixed delays — not worth a dependency |
-
-**Key insight:** Web Crypto is the right tool for token encryption at rest. Adding `node-forge`, `crypto-js`, or `jose` would introduce an external dependency for something the platform provides natively.
+| FIT binary parsing | Custom binary reader | `fit-file-parser` | FIT protocol has CRC validation, encoding tables, message definitions — 400+ lines of spec |
+| TSS bar chart | SVG/canvas drawing | `recharts` BarChart | Axis scaling, responsive layout, tooltip, accessibility — already solved |
+| Drizzle drop+create migration | Manual SQL in migration | `drizzle-kit generate` | Handles snapshot diffing and `_journal.json` bookkeeping automatically |
 
 ---
 
 ## Common Pitfalls
 
-### Pitfall 1: `redirect()` Swallowed by try/catch in Server Actions
-**What goes wrong:** The Server Action completes without redirecting; user sees no response.
-**Why it happens:** Next.js `redirect()` internally throws a `NEXT_REDIRECT` error. A `catch (e)` block catches it and swallows it.
-**How to avoid:** Never wrap `redirect()` in a try/catch. Structure as: do work in try, call redirect after the block.
-**Warning signs:** Server Action returns without navigating; no error logged but no redirect occurs.
+### Pitfall 1: Vercel 4.5 MB Body Hard Cap
+**What goes wrong:** File uploads over 4.5 MB return `413: FUNCTION_PAYLOAD_TOO_LARGE` from Vercel's infrastructure before the Route Handler runs. The handler cannot catch this.
+**Why it happens:** Vercel buffers the entire request body in memory before invoking the function. Hard limit, not configurable.
+**How to avoid:** Check `file.size > 4 * 1024 * 1024` inside the Route Handler (for files that slip through) AND display the 4 MB limit in the upload UI. Typical .fit files are 100 KB–2 MB.
+**Warning signs:** 413 errors with no Route Handler logs.
 
-### Pitfall 2: BigInt Serialization at RSC → Client Component Boundary
-**What goes wrong:** `Error: BigInt value can't be serialized.` at the Next.js serialization boundary when passing Drizzle `bigint` column values from RSC to a Client Component as props.
-**Why it happens:** Next.js uses JSON serialization for RSC → Client prop handoff; `BigInt` is not JSON-serializable.
-**How to avoid:** Convert `stravaActivityId` to `string` (or `number` if within safe range, but Strava IDs are large — use `string`) before passing as a prop. Alternatively use `Number(id)` if you're sure it fits (Strava IDs are ~10 digits — safely within `Number.MAX_SAFE_INTEGER`).
-**Warning signs:** Hydration error or serialization error in dev console.
+### Pitfall 2: fit-file-parser mode affects data access path
+**What goes wrong:** With `mode: 'cascade'` (the default in the example script), sessions live at `data.activity.sessions[0]`. With `mode: 'list'`, sessions live at `data.sessions[0]`.
+**Why it happens:** The mode changes the tree structure vs. flat structure of the parsed output.
+**How to avoid:** Always specify `mode: 'list'` explicitly and access `data.sessions[0]`.
+**Warning signs:** `data.sessions` is undefined; the session object has no fields.
 
-### Pitfall 3: OAuth State Replay Attack if Session Not Saved Before Redirect
-**What goes wrong:** CSRF validation fails on every callback because `pending_strava_state` was never persisted.
-**Why it happens:** iron-session requires explicit `session.save()` before the `redirect()` call. If `redirect()` happens first, the state is lost.
-**How to avoid:** Always `await session.save()` before `redirect()` in `connectStravaAction`.
-**Warning signs:** Callback always returns `state_mismatch` error.
+### Pitfall 3: `avg_power` absent on non-power-meter rides
+**What goes wrong:** Rides from devices without a power meter don't include `avg_power` in the session message. Accessing it without a null check throws or stores 0.
+**Why it happens:** `avg_power` is optional in the FIT spec.
+**How to avoid:** `session.avg_power ?? null` — store null, skip TSS estimation.
+**Warning signs:** TSS stored as 0 for all rides.
 
-### Pitfall 4: Token Exchange Receives Already-Used Code
-**What goes wrong:** Strava returns `400` with `{ "message": "Authorization code already used" }`.
-**Why it happens:** Callback Route Handler is called twice (browser preloading, duplicate request, or middleware retry).
-**How to avoid:** Delete `pending_strava_state` from session at the start of the callback before the token exchange — this is already D-01 pattern (delete immediately after validation). Second call will fail state check and redirect to error page cleanly.
-**Warning signs:** `tokenRes.ok === false` with 400 response on second callback invocation.
+### Pitfall 4: Drizzle silently drops first `.where()` when chained
+**What goes wrong:** Writing `.where(eq(activityUploads.userId, userId)).where(eq(activityUploads.id, uploadId))` returns rows for ANY userId — IDOR vulnerability.
+**Why it happens:** Drizzle's API silently replaces the first where clause.
+**How to avoid:** Always `and(eq(table.userId, userId), eq(table.id, id))` in a single `.where()` call.
+**Warning signs:** Cross-user data access in tests.
 
-### Pitfall 5: AES-GCM Key Import Fails on Wrong Base64 Length
-**What goes wrong:** `crypto.subtle.importKey` throws `DOMException: The provided data is too small`.
-**Why it happens:** AES-256-GCM requires exactly 32 bytes. A `TOKEN_ENC_KEY` that is 32 characters but ASCII (not 32 bytes) will fail.
-**How to avoid:** Generate with `openssl rand -base64 32` (produces 44 base64 chars = 32 bytes). Document this in env setup. Validate at startup: `if (Buffer.from(TOKEN_ENC_KEY, "base64").length !== 32) throw new Error(...)`.
-**Warning signs:** `DOMException` on first encrypt call; only fails at runtime, not at build time.
+### Pitfall 5: recharts requires a parent with explicit height
+**What goes wrong:** `ResponsiveContainer height={300}` renders at 0px if the parent `div` has no height.
+**Why it happens:** `ResponsiveContainer` measures its parent's dimensions.
+**How to avoid:** Wrap in a `div` with explicit height or use `height={300}` on `ResponsiveContainer` directly (not `height="100%"` unless parent has a fixed height).
+**Warning signs:** Blank chart area, no error in console.
 
-### Pitfall 6: Strava `elapsed_time` vs `moving_time`
-**What goes wrong:** Match algorithm never finds a match even though the user rode the session.
-**Why it happens:** Strava activities expose both `elapsed_time` (wall clock including stops) and `moving_time` (time in motion). A session with intervals has rests; `moving_time` will be shorter than `totalDurationSec`. Use `elapsed_time` for matching.
-**How to avoid:** Match against `activity.elapsed_time`, not `activity.moving_time`. [ASSUMED — based on Strava API field definitions]
-**Warning signs:** No matches despite correct dates; match algorithm logs show duration comparison always failing.
+---
 
-### Pitfall 7: `upsertStravaConnection` Must Use `onConflictDoUpdate` on `userId`
-**What goes wrong:** Duplicate key violation if user disconnects and reconnects.
-**Why it happens:** `stravaConnections.userId` has a `.unique()` constraint. A plain INSERT on reconnect fails.
-**How to avoid:** Use Drizzle's `.onConflictDoUpdate({ target: stravaConnections.userId, set: { ... } })`. This is the same pattern as `user_profiles` upsert (Phase 2 D-03).
-**Warning signs:** `NeonDbError` with code `23505` on reconnect attempt.
+## Code Examples
 
-### Pitfall 8: Rate Limit on Initial Match After Connect
-**What goes wrong:** Hitting Strava 429 during the callback's initial match trigger, blocking the redirect.
-**Why it happens:** If the user has many prior sessions, the match trigger fetches 30 activities and does N DB writes — within Strava's limits for a single call, but if called rapidly (test environments), the 100 req/15min limit is approached.
-**How to avoid:** Wrap the initial match call in the callback with `try/catch` — errors don't block the redirect (already specified in Pattern 3). The user can Refresh manually if the initial match fails.
-**Warning signs:** Callback times out or returns error before redirecting; `/dashboard?strava_error=...` appears unexpectedly.
+### buildWeeklyTSS — in-memory aggregation (6 weeks × ≤7 sessions)
+
+```typescript
+// src/lib/fit/tss-chart-data.ts
+interface ActivityUpload {
+  startedAt: Date;
+  estimatedTss: number | null;
+  matchedSessionId: string | null;
+}
+
+interface WeeklyTSSPoint {
+  week: string;   // "Jun 9"
+  tss: number;
+}
+
+export function buildWeeklyTSS(uploads: ActivityUpload[]): WeeklyTSSPoint[] {
+  const now = new Date();
+  const weeks: WeeklyTSSPoint[] = [];
+
+  // Build 6 week buckets, Monday-anchored
+  for (let i = 5; i >= 0; i--) {
+    const weekStart = getMonday(now, -i);
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekEnd.getDate() + 7);
+
+    const label = weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+    const tss = uploads
+      .filter(u =>
+        u.matchedSessionId !== null &&
+        u.estimatedTss !== null &&
+        u.startedAt >= weekStart &&
+        u.startedAt < weekEnd
+      )
+      .reduce((sum, u) => sum + (u.estimatedTss ?? 0), 0);
+
+    weeks.push({ week: label, tss });
+  }
+
+  return weeks;
+}
+
+function getMonday(date: Date, weekOffset: number): Date {
+  const d = new Date(date);
+  const day = d.getDay();
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Monday = 1
+  d.setDate(diff + weekOffset * 7);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+```
+
+### Drizzle schema for activityUploads
+
+```typescript
+// In src/lib/db/schema.ts — replace stravaConnections
+import { pgTable, uuid, text, timestamp, index, integer } from "drizzle-orm/pg-core";
+
+export const activityUploads = pgTable(
+  "activity_uploads",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    fileName: text("file_name").notNull(),
+    startedAt: timestamp("started_at").notNull(),
+    durationSec: integer("duration_sec").notNull(),
+    avgPowerW: integer("avg_power_w"),                  // nullable — no power meter
+    estimatedTss: integer("estimated_tss"),             // nullable — no FTP or no power
+    matchedSessionId: uuid("matched_session_id")
+      .references(() => trainingSessions.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (t) => [index("activity_uploads_user_id_idx").on(t.userId)]
+);
+```
 
 ---
 
 ## Runtime State Inventory
 
-This is a feature addition phase (not a rename/refactor), so full runtime state inventory does not apply. However, note:
+> Phase 5 drops a table. Check for runtime state before applying the migration.
 
 | Category | Items Found | Action Required |
-|----------|-------------|-----------------|
-| Stored data | `stravaConnections` table skeleton exists (id, userId, createdAt only) | Migration 0003: add token columns |
-| Stored data | `trainingSessions` table has no `stravaActivityId` column | Migration 0004: add column |
-| Secrets/env vars | `TOKEN_ENC_KEY`, `STRAVA_CLIENT_ID`, `STRAVA_CLIENT_SECRET`, `APP_BASE_URL` already exported from `src/env.ts` | Must be set in Vercel env — confirm before deploy |
-| Build artifacts | None | None |
-| Live service config | None | None |
+|----------|-------------|------------------|
+| Stored data | `strava_connections` table — skeleton only (id, user_id, created_at). Created in migration 0000. No data expected in development. | Verify `SELECT COUNT(*) FROM strava_connections = 0` before running migration. |
+| Live service config | None — no Strava OAuth tokens stored (Strava OAuth was never implemented) | None |
+| OS-registered state | None | None |
+| Secrets/env vars | None referencing `stravaConnections` or Strava OAuth in this codebase | None |
+| Build artifacts | `queries.ts` imports `stravaConnections` from schema — will break TypeScript compile after schema change | Update `queries.ts` import + remove `findStravaConnection` in same PR |
+
+**Migration safety:** The `strava_connections` table was created as a skeleton in Phase 0. It has never had Strava data written to it (Strava OAuth was never completed). DROP TABLE is safe.
 
 ---
 
@@ -647,15 +594,15 @@ This is a feature addition phase (not a rename/refactor), so full runtime state 
 
 | Dependency | Required By | Available | Version | Fallback |
 |------------|------------|-----------|---------|----------|
-| Node.js ≥20.9 | `crypto.subtle` global | Verify | — | None — hard requirement |
-| Strava API credentials | OAuth flow | Must be set | — | Phase cannot execute without them |
-| `TOKEN_ENC_KEY` env var | AES-GCM key import | Must be set | — | Startup validation should throw if absent |
-| `APP_BASE_URL` env var | OAuth callback URL | Must be set | — | No fallback; Strava redirect will point to wrong URL |
-| Neon `DATABASE_URL_UNPOOLED` | drizzle-kit migrations | Already confirmed (prior phases) | — | — |
+| Node.js | fit-file-parser (Buffer API) | ✓ | 20.9+ (confirmed by CLAUDE.md) | — |
+| `drizzle-kit` | Migration generation | ✓ | 0.31.10 (in devDependencies) | — |
+| `DATABASE_URL_UNPOOLED` | Migration execution | Assumed ✓ | — | Cannot migrate without it |
+| `recharts` | TSS chart | ✗ | — | Must install: `npm install recharts` |
+| `fit-file-parser` | FIT parsing | ✗ | — | Must install: `npm install fit-file-parser` |
 
-**Missing dependencies with no fallback:**
-- Strava API credentials (`STRAVA_CLIENT_ID`, `STRAVA_CLIENT_SECRET`) — must be provisioned in Vercel env before Phase 5 deploy. Plan should include a Wave 0 or pre-task checkpoint confirming these exist.
-- `TOKEN_ENC_KEY` — 32-byte base64 key. Generate with `openssl rand -base64 32`.
+**Missing dependencies requiring install:**
+- `fit-file-parser@3.0.2` — Wave 0 install task
+- `recharts@3.8.1` — Wave 0 install task
 
 ---
 
@@ -665,35 +612,28 @@ This is a feature addition phase (not a rename/refactor), so full runtime state 
 
 | Property | Value |
 |----------|-------|
-| Framework | vitest (existing) |
-| Config file | vitest.config.ts (existing) |
-| Quick run command | `npx vitest run` |
-| Full suite command | `npx vitest run --coverage` |
+| Framework | vitest (in devDependencies) |
+| Config file | none detected — vitest uses defaults (reads from `vite.config.ts` or inline) |
+| Quick run command | `npx vitest run --reporter=verbose` |
+| Full suite command | `npx vitest run` |
 
 ### Phase Requirements → Test Map
 
 | Req ID | Behavior | Test Type | Automated Command | File Exists? |
 |--------|----------|-----------|-------------------|-------------|
-| STRAVA-05 | `encryptToken` → `decryptToken` round-trips correctly | unit | `npx vitest run src/lib/strava/crypto.test.ts` | ❌ Wave 0 |
-| STRAVA-05 | Encrypted output differs from plaintext | unit | same | ❌ Wave 0 |
-| STRAVA-01 | `matchActivities` returns correct match on date+duration overlap | unit | `npx vitest run src/lib/strava/match.test.ts` | ❌ Wave 0 |
-| STRAVA-01 | `matchActivities` returns no match when date differs | unit | same | ❌ Wave 0 |
-| STRAVA-01 | `matchActivities` returns no match when duration outside ±20% | unit | same | ❌ Wave 0 |
-| STRAVA-04 | `fetchWithBackoff` retries on 429, succeeds on 3rd attempt | unit (mock fetch) | `npx vitest run src/lib/strava/client.test.ts` | ❌ Wave 0 |
-| STRAVA-04 | `fetchWithBackoff` returns 429 after 3 exhausted retries | unit (mock fetch) | same | ❌ Wave 0 |
-| PROG-02 | `buildWeeklyTSS` groups matched sessions into correct week buckets | unit | `npx vitest run src/lib/strava/tss-chart.test.ts` | ❌ Wave 0 |
-| PROG-02 | `buildWeeklyTSS` returns zero TSS for weeks with no matched sessions | unit | same | ❌ Wave 0 |
-
-### Sampling Rate
-- **Per task commit:** `npx vitest run`
-- **Per wave merge:** `npx vitest run --coverage`
-- **Phase gate:** Full suite green before `/gsd-verify-work`
+| D-07/D-08 | `parseFitFile(buffer)` returns correct startedAt, durationSec, avgPowerW | unit | `npx vitest run src/lib/fit/parse.test.ts` | ❌ Wave 0 |
+| D-10 | `matchActivity()` returns correct sessionId on date+duration match | unit | `npx vitest run src/lib/fit/match.test.ts` | ❌ Wave 0 |
+| D-10 | `matchActivity()` returns null when date doesn't match | unit | `npx vitest run src/lib/fit/match.test.ts` | ❌ Wave 0 |
+| D-10 | `matchActivity()` returns null when duration >20% off | unit | `npx vitest run src/lib/fit/match.test.ts` | ❌ Wave 0 |
+| D-14 | `buildWeeklyTSS()` groups 6 weeks correctly | unit | `npx vitest run src/lib/fit/tss-chart-data.test.ts` | ❌ Wave 0 |
+| D-01 | POST /api/fit/upload with no session → 401 | integration/manual | manual | — |
+| D-02 | POST /api/fit/upload with file >4MB → 413 | unit | `npx vitest run src/lib/fit/parse.test.ts` | ❌ Wave 0 |
 
 ### Wave 0 Gaps
-- [ ] `src/lib/strava/crypto.test.ts` — covers STRAVA-05
-- [ ] `src/lib/strava/match.test.ts` — covers STRAVA-01/STRAVA-03
-- [ ] `src/lib/strava/client.test.ts` — covers STRAVA-04 (mock `fetch` via `vi.stubGlobal`)
-- [ ] `src/lib/strava/tss-chart.test.ts` — covers PROG-02 `buildWeeklyTSS` function
+
+- [ ] `src/lib/fit/parse.test.ts` — covers D-07/D-08 (parseFitFile unit tests; use a small synthetic Buffer)
+- [ ] `src/lib/fit/match.test.ts` — covers D-10 (matchActivity: match, no-date-match, no-duration-match)
+- [ ] `src/lib/fit/tss-chart-data.test.ts` — covers D-14 (buildWeeklyTSS grouping)
 
 ---
 
@@ -703,22 +643,19 @@ This is a feature addition phase (not a rename/refactor), so full runtime state 
 
 | ASVS Category | Applies | Standard Control |
 |---------------|---------|-----------------|
-| V2 Authentication | yes | iron-session state check + scope confirmation in callback |
-| V3 Session Management | yes | `pending_strava_state` deleted after single use; iron-session httpOnly cookie |
-| V4 Access Control | yes | IDOR guard on all DB queries: `and(eq(table.userId, userId), ...)` |
-| V5 Input Validation | yes | Validate `state`, `code`, `scope` params in callback before any DB write |
-| V6 Cryptography | yes | AES-GCM via `crypto.subtle`; 16-byte random IV per encrypt; 256-bit key |
+| V2 Authentication | yes | iron-session guard at Route Handler top |
+| V4 Access Control | yes | `and(eq(activityUploads.userId, userId), ...)` — IDOR guard mandatory |
+| V5 Input Validation | yes | file.size check; try/catch on parseFitFile; no user content in SQL |
+| V6 Cryptography | no | No new crypto in this phase |
 
 ### Known Threat Patterns
 
 | Pattern | STRIDE | Standard Mitigation |
 |---------|--------|---------------------|
-| CSRF on OAuth callback | Spoofing | Cryptographic state parameter (D-01); must match session value |
-| Token theft from DB | Information Disclosure | AES-GCM at rest (STRAVA-05); `TOKEN_ENC_KEY` never in client bundle |
-| IDOR on Strava data | Elevation of Privilege | `findStravaConnectionByUserId(userId)` — userId scopes all queries |
-| Scope escalation (more than requested) | Elevation of Privilege | Explicit `activity:read` scope check on callback; reject if absent |
-| Stale/replayed auth code | Spoofing | Delete `pending_strava_state` on first callback use; Strava auth codes are single-use |
-| 401 from Strava → silent fail | Tampering | 401 = prompt reconnect; do not silently retry with stale tokens |
+| IDOR on upload delete | Elevation of Privilege | `and(eq(activityUploads.userId, userId), eq(activityUploads.id, uploadId))` |
+| Oversized .fit file DoS | DoS | `file.size > 4MB` check before `arrayBuffer()` |
+| Malformed FIT binary | Tampering | `try/catch` around `parseFitFile` → 400 |
+| Unauthenticated upload | Spoofing | `getIronSession` at Route Handler entry; 401 on no session |
 
 ---
 
@@ -726,14 +663,9 @@ This is a feature addition phase (not a rename/refactor), so full runtime state 
 
 | Old Approach | Current Approach | When Changed | Impact |
 |--------------|------------------|--------------|--------|
-| `node-forge` / `crypto-js` for browser crypto | Web Crypto API (`crypto.subtle`) | Node.js 15+ / Web platform standard | No external package; authenticated encryption built in |
-| `next-auth` for OAuth | Custom iron-session + direct Strava API | Project decision (Phase 1) | Smaller dependency surface; full control over token handling |
-| Strava `refresh_token_expires_at` field | Ignored in v1 | — | Strava refresh tokens are long-lived (valid 6mo+); not required for v1 |
-
-**Deprecated / not applicable:**
-- `next-auth`/`Auth.js` Strava provider — project uses custom OAuth flow (Phase 1 decision, locked).
-- `node-forge` — unnecessary when `crypto.subtle` is available.
-- Strava webhooks — deferred to v2 (STRAVA-V2-01).
+| Strava OAuth for activity sync | .fit file upload (direct) | Phase 5 replan (2026-06-15) | No Strava subscription required |
+| `stravaConnections` table | `activityUploads` table | Phase 5 migration | Drop + create in one migration |
+| `fit-file-parser` v1/v2 callback-only API | v3 `parseAsync()` | v3.0.0 (2026) | Clean async/await; no callback wrapper needed |
 
 ---
 
@@ -741,59 +673,52 @@ This is a feature addition phase (not a rename/refactor), so full runtime state 
 
 | # | Claim | Section | Risk if Wrong |
 |---|-------|---------|---------------|
-| A1 | `crypto.subtle` is available as a global in Next.js 16 / Node 20+ without explicit import | Pattern 1 | Would need `import { webcrypto } from "node:crypto"` polyfill; low-risk fix |
-| A2 | Strava `elapsed_time` is the correct field to match against `totalDurationSec` | Pattern 6, Pitfall 6 | If `moving_time` is better, match rate drops for sessions with rests; can be toggled |
-| A3 | Strava athlete IDs fit within JavaScript `Number.MAX_SAFE_INTEGER` (2^53-1) | Pattern 9 | Current Strava IDs are ~9-10 digits (~10^9); well within 2^53. Low risk. |
-| A4 | `crypto.subtle.importKey` for AES-256-GCM accepts `{ name: "AES-GCM", length: 256 }` as algorithm | Pattern 1 | If `length` param is wrong, `importKey` throws; trivially testable in Wave 0 |
-| A5 | Recharts `<Bar radius={[4, 4, 0, 0]}>` prop syntax is valid in recharts 3.8.1 | Pattern 8 | If API changed, use `radius={4}` as fallback; visual-only impact |
-| A6 | `buildWeeklyTSS` week boundaries using `getDate() - getDay()` correctly computes Sunday-start weeks in UTC | Pattern 7 | Off-by-one in week bucketing; testable in Wave 0 |
+| A1 | Typical cycling .fit files are 100 KB–2 MB, well under 4 MB limit | Standard Stack | If a user's device produces >4 MB files (e.g., Garmin navigation bug), they get a 413 — surfaced as UI error |
+| A2 | `fit-file-parser` v3 works without `transpilePackages` in Next.js 16 with Turbopack | Pattern 1 | If ESM/CJS resolution fails, add `transpilePackages: ['fit-file-parser']` to `next.config.ts` |
+| A3 | `strava_connections` table has 0 rows in all environments | Runtime State Inventory | If it has rows, the DROP will fail FK constraints (no FKs from other tables, so it won't) — but data loss is possible in a real deployment |
 
 ---
 
-## Open Questions (RESOLVED)
+## Open Questions
 
-1. **`SESSION_SECRET` env var name consistency**
-   - What we know: `src/lib/session.ts` reads `process.env.SESSION_SECRET` directly (not via `src/env.ts`).
-   - What was unclear: Whether `TOKEN_ENC_KEY` startup validation should be co-located with other startup checks in `src/env.ts`.
-   - **RESOLVED:** 05-01 Task 1 adds a 32-byte length check for `TOKEN_ENC_KEY` directly in `src/env.ts` (immediately after the existing export), matching the style of the `ANTHROPIC_API_KEY` guard. `SESSION_SECRET` remains read directly by `session.ts` (existing pattern; not changed).
+1. **`transpilePackages` for fit-file-parser?**
+   - What we know: fit-file-parser v3 ships dual ESM/CJS. Next.js 16 Turbopack handles most dual-package libraries.
+   - What's unclear: Whether Turbopack needs `transpilePackages: ['fit-file-parser']` to resolve the ESM build correctly.
+   - Recommendation: Don't add it initially. If `import FitParser from 'fit-file-parser'` fails with a module resolution error at runtime, add `transpilePackages: ['fit-file-parser']` to `next.config.ts`. [ASSUMED]
 
-2. **Strava brand SVG asset**
-   - What we know: Must be stored at `public/connect-with-strava.svg` (not hotlinked). UI-SPEC confirms this.
-   - What was unclear: The exact download URL for the official Strava button asset.
-   - **RESOLVED:** 05-01 Task 3 (the checkpoint task) instructs the executor to download the SVG from `https://developers.strava.com/guidelines/` and store it at `public/connect-with-strava.svg`. The file path is listed in `files_modified` for 05-01 — it is an explicit planned artifact.
+2. **Delete upload UX — inline confirm or direct?**
+   - What we know: Decision left to Claude's discretion.
+   - What's unclear: Whether a delete confirm adds enough safety or is just friction for a low-stakes action.
+   - Recommendation: Direct delete (no confirm) for v1. The consequence of accidental delete is re-uploading a .fit file — low cost.
 
 ---
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- `src/lib/db/schema.ts` — confirmed `stravaConnections` skeleton and `trainingSessions` columns [VERIFIED: codebase]
-- `src/lib/session.ts` — confirmed `SessionData` type, `sessionOptions` pattern [VERIFIED: codebase]
-- `src/lib/db/queries.ts` — confirmed IDOR and() pattern, existing query helpers [VERIFIED: codebase]
-- `src/lib/training/tss.ts` — confirmed `computeTSS` signature and return type [VERIFIED: codebase]
-- `src/env.ts` — confirmed all 4 Strava env vars already exported [VERIFIED: codebase]
-- `.planning/phases/05-strava-integration/05-CONTEXT.md` — all locked decisions [VERIFIED: planning artifact]
-- `.planning/phases/05-strava-integration/05-UI-SPEC.md` — UI component inventory, copy keys, layout contract [VERIFIED: planning artifact]
-- `CLAUDE.md` — stack versions (recharts 3.8.1, iron-session 8.0.4, Next.js 16) [VERIFIED: project instructions]
+- `github.com/jimmykane/fit-parser` — `src/fit-parser.ts`, `src/fit_types.ts`, `src/helper.ts`, `examples/parse.js` — direct repo read via `gh api`
+- `vercel.com/docs/functions/limitations` — Vercel 4.5 MB hard body size limit (confirmed from official docs, last updated 2026-06-02)
+- `recharts.github.io/en-US/api/BarChart/` — BarChart props and ResponsiveContainer pattern
 
 ### Secondary (MEDIUM confidence)
-- Strava API reference (from additional_context): token exchange URL, activities endpoint, 429 behavior [CITED: https://developers.strava.com/docs/authentication/]
+- `github.com/vercel/next.js/discussions/48738` — confirmed `request.formData()` + `file.arrayBuffer()` pattern for App Router Route Handlers
+- `npm view fit-file-parser --json` — version 3.0.2, dependency `buffer@^6.0.3`, no postinstall
+- `orm.drizzle.team/docs/drizzle-kit-generate` — drizzle-kit generates DROP TABLE when table removed from schema
 
-### Tertiary (LOW confidence / ASSUMED)
-- Web Crypto API `crypto.subtle` global availability in Next.js 16 Node 20 runtime [ASSUMED]
-- Strava `elapsed_time` vs `moving_time` correct field for duration matching [ASSUMED]
-- Recharts 3.8.1 `radius` prop array syntax on `<Bar>` [ASSUMED]
+### Tertiary (LOW confidence)
+- Web search: Vercel 4.5 MB limit widely documented across community posts — cross-confirmed with official docs (upgraded to HIGH)
 
 ---
 
 ## Metadata
 
 **Confidence breakdown:**
-- Standard stack: HIGH — all deps already installed; versions from CLAUDE.md
-- Architecture: HIGH — all decisions locked in CONTEXT.md; patterns derived from existing codebase
-- Crypto patterns: MEDIUM — Web Crypto API is standard but runtime availability is ASSUMED
-- Activity matching: MEDIUM — algorithm is straightforward; `elapsed_time` field choice is ASSUMED
-- Pitfalls: HIGH — derived from existing project patterns (IDOR, redirect(), session.save(), upsert)
+- fit-file-parser API: HIGH — read directly from repo source files
+- Next.js formData upload pattern: HIGH — confirmed from official discussions + existing project pattern (login route uses same Request pattern)
+- Vercel 4.5 MB limit: HIGH — confirmed from official Vercel docs (2026-06-02)
+- Drizzle migration drop+create: MEDIUM — documented behavior; will verify output after `drizzle-kit generate`
+- recharts BarChart pattern: HIGH — confirmed from official recharts docs
+- TSS formula: HIGH — matches CONTEXT.md D-08 spec
 
 **Research date:** 2026-06-15
-**Valid until:** 2026-07-15 (Strava API is stable; recharts 3.x is stable)
+**Valid until:** 2026-09-15 (stable APIs)
