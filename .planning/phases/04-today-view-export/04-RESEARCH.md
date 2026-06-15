@@ -589,17 +589,17 @@ SESSION_DASHBOARD_VIEW_LINK: "View session",
 | A4 | `text-[120px]` is appropriate for the watt numeral on mobile viewport | Pattern 2 | Visual — numeral may overflow or be too small; adjust during implementation |
 | A5 | `new NextResponse(xmlString, { headers })` is the correct Route Handler pattern for string body | Pattern 5 | Response not sent correctly; fix by switching to `new Response(xmlString, { headers })` |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Zwift `.zwo` attribute casing**
    - What we know: The format is documented in cycling communities; `SteadyState`, `Warmup`, `Cooldown` element names are widely confirmed.
    - What's unclear: Exact attribute names (`Power` vs `power`, `Duration` vs `duration`) — Zwift's parser may be case-sensitive.
-   - Recommendation: Planner should add a verification task: download a Zwift-generated `.zwo` file and compare attribute casing. If confirmed, promote A3 to VERIFIED. Alternatively, use the community-documented capitalization (title-case attributes) which appears consistent across all documented examples.
+   - **RESOLUTION:** Proceed with community-documented title-case capitalization (`Power`, `Duration`, `PowerLow`, `PowerHigh`), which is consistent across all documented examples and widely used in open-source .zwo generators. If Zwift rejects the file, the executor should try lowercase as a first fallback (5-minute fix). The human-verify checkpoint in Plan 02 includes loading the .zwo in Zwift to confirm. A3 is treated as VERIFIED for planning purposes.
 
 2. **`redirect()` + `useTransition` interaction in Next.js 16**
    - What we know: `redirect()` in Server Actions is documented to throw `NEXT_REDIRECT`. React 18+ catches this in the framework.
    - What's unclear: Whether `useTransition`'s error handling path intercepts the throw before the framework.
-   - Recommendation: Test the redirect path in Wave 1 (the `generateSessionAction` update). If navigation doesn't work, fall back to returning `{ redirect: string }` from the action and using `router.push()` in `SessionGenerator`.
+   - **RESOLUTION:** Proceed with `redirect()` (Plan 01 Task 3 approach). This is the documented Next.js 16 Server Action pattern. If navigation does not occur during Wave 1 testing, the executor should fall back to returning `{ redirectTo: string }` from the action and calling `router.push(res.redirectTo)` in `SessionGenerator`. The fallback path is concrete and 10-minute scope; no additional plan task is needed. A2 resolved by commitment to this contingency.
 
 ## Environment Availability
 
