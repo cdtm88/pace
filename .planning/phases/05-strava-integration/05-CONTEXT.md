@@ -21,8 +21,8 @@ Add .fit file upload, server-side FIT parsing, activity-to-session matching, and
 ### Upload Architecture
 
 - **D-01: Upload endpoint:** POST Route Handler at `src/app/api/fit/upload/route.ts`. Receives `multipart/form-data`, reads the file buffer, passes it to `fit-file-parser`, returns JSON with parsed fields and match result. IDOR-guarded via session userId.
-- **D-02: File size limit:** 10 MB max (typical .fit file is 100–500 KB; 10 MB covers edge cases without server abuse risk). Return 413 if exceeded.
-- **D-03: Client component:** `UploadFitButton` — `<input type="file" accept=".fit">` wrapped in a form, submits via `fetch()` to the Route Handler. Shows loading state during upload, success/error state after. Lives in `src/components/strava/upload-fit-button.tsx` (keep `strava/` directory for v2 migration ease).
+- **D-02: File size limit:** 4 MB max in Route Handler code (Vercel enforces a 4.5 MB per-request hard cap at infrastructure level — non-configurable). Typical .fit file is 100 KB–2 MB; 4 MB covers all normal use. Return 413 if exceeded.
+- **D-03: Client component:** `UploadFitButton` — `<input type="file" accept=".fit">` wrapped in a form, submits via `fetch()` to the Route Handler. Shows loading state during upload, success/error state after. Lives in `src/components/fit/upload-fit-button.tsx`. (Note: original CONTEXT said `strava/` directory — corrected to `fit/` to match the post-replan project structure used in RESEARCH.md and the execution plans.)
 
 ### Database Schema
 
@@ -38,7 +38,7 @@ Add .fit file upload, server-side FIT parsing, activity-to-session matching, and
 
 ### Activity Matching
 
-- **D-10: Match algorithm:** Same as the discarded Strava plan — same UTC calendar date AND `durationSec` within ±20% of `training_sessions.totalDurationSec`. Query the user's sessions, find the best match, write `matchedSessionId`. Pure function in `src/lib/fit/match.ts` (same interface as prior `strava/match.ts`).
+- **D-10: Match algorithm:** Same as the discarded Strava plan — same UTC calendar date AND `durationSec` within ±20% of `training_sessions.totalDurationSec`. Query the user's sessions, find the best match, write `matchedSessionId`. Pure function in `src/lib/fit/match.ts`.
 - **D-11: No match case:** If no session matches, still store the upload with `matchedSessionId = null`. UI shows "No matching session found for this ride" below the upload confirmation.
 
 ### Dashboard UI
@@ -85,7 +85,7 @@ Add .fit file upload, server-side FIT parsing, activity-to-session matching, and
   - `src/lib/fit/match.ts` — activity-to-session matching pure function
   - `src/app/api/fit/upload/route.ts` — POST Route Handler (multipart, IDOR-guarded)
   - `src/lib/actions/fit.ts` — Server Action: deleteUpload
-  - `src/lib/strava/tss-chart-data.ts` → `src/lib/fit/tss-chart-data.ts` — buildWeeklyTSS
+  - `src/lib/fit/tss-chart-data.ts` — buildWeeklyTSS
   - `src/components/fit/upload-fit-button.tsx` — Client Component for file input
   - `src/components/fit/tss-chart.tsx` — recharts TSS bar chart Client Component
 
@@ -94,13 +94,13 @@ Add .fit file upload, server-side FIT parsing, activity-to-session matching, and
 <specifics>
 ## Specific Ideas
 
-- `fit-file-parser` usage: `new FitParser({ force: true, speedUnit: 'km/h', lengthUnit: 'm', temperatureUnit: 'celsius', elapsedRecordField: true, mode: 'cascade' })` — use `force: true` to tolerate minor file corruption
-- Session message fields: `start_time` (Date), `total_elapsed_time` (seconds), `avg_power` (watts, optional)
-- TSS formula: `(durationSec × avgPowerW × IF) / (FTP × 3600) × 100` where `IF = avgPowerW / FTP`
+- `fit-file-parser` usage: `new FitParser({ force: true, speedUnit: 'km/h', lengthUnit: 'm', temperatureUnit: 'celsius', elapsedRecordField: false, mode: 'list' })` — use `force: true` to tolerate minor file corruption; `mode: 'list'` gives flat `data.sessions[]` (not nested under activity)
+- Session message fields: `start_time` (string/Date), `total_elapsed_time` (seconds), `avg_power` (watts, optional)
+- TSS formula: `TSS = (durationSec × IF² × 100) / 3600` where `IF = avgPowerW / FTP`
 - Chart X-axis: week labels like "Jun 9", "Jun 16"
 - Bar color: `#f97316` (Tailwind orange-500) — consistent with original Strava chart design
 - Weekly TSS computed in-memory (6 weeks × ≤7 sessions — tiny)
-- Delete action: `deleteActivityUploadAction(uploadId)` → Server Action with IDOR guard
+- Delete action: `deleteUploadAction(uploadId)` → Server Action with IDOR guard
 
 </specifics>
 
@@ -119,3 +119,4 @@ Add .fit file upload, server-side FIT parsing, activity-to-session matching, and
 *Phase: 5-activity-upload*
 *Context gathered: 2026-06-15*
 *Replanned: 2026-06-15 — switched from Strava OAuth to .fit upload*
+*Updated: 2026-06-15 — D-03 path corrected to src/components/fit/ (post-replan; checker warning resolved)*
