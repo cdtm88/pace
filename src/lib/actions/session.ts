@@ -112,7 +112,8 @@ export async function generateSessionAction(
 
     // Extract text from response (Pitfall 2: must access .content[0].text, not the response object)
     rawText = msg.content[0]?.type === 'text' ? msg.content[0].text : ''
-  } catch {
+  } catch (err) {
+    console.error('[generateSessionAction] Anthropic error:', err)
     return { error: 'Generation failed. Please try again in a moment.' }
   }
 
@@ -137,9 +138,14 @@ export async function generateSessionAction(
     return { error: "Couldn't generate a valid session. Please try again." }
   }
 
+  // Compute totalDurationSec from blocks — Claude's arithmetic is unreliable.
+  // Override whatever value Claude provided with the authoritative server-side sum.
+  const blockSum = zodResult.data.blocks.reduce((sum, b) => sum + b.durationSec, 0)
+  const sessionData = { ...zodResult.data, totalDurationSec: blockSum }
+
   // ── Step 6: Safety gate ───────────────────────────────────────────────────
   // Runs AFTER Zod (D-09 order). Input is always a valid GeneratedSession at this point.
-  const safety = validateSessionSafety(zodResult.data)
+  const safety = validateSessionSafety(sessionData)
   if (!safety.safe) {
     // Server-log only — never surface reason to the client (T-03-07)
     console.error('[generateSessionAction] Safety gate failed:', safety.reason)
@@ -148,7 +154,7 @@ export async function generateSessionAction(
 
   // ── Step 7: Compute watt targets + DB write ───────────────────────────────
   const blocksWithWatts = computeWattTargets(
-    zodResult.data.blocks,
+    sessionData.blocks,
     profile?.ftp ?? null
   )
 
@@ -158,13 +164,13 @@ export async function generateSessionAction(
       .insert(trainingSessions)
       .values({
         userId,
-        title: zodResult.data.title,
-        notes: zodResult.data.notes,
+        title: sessionData.title,
+        notes: sessionData.notes,
         readinessScore,
         // Cast required: Drizzle jsonb column type requires unknown cast (Pitfall 7)
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         blocks: blocksWithWatts as unknown as any,
-        totalDurationSec: zodResult.data.totalDurationSec,
+        totalDurationSec: sessionData.totalDurationSec,
         rawJson: rawText,   // stored server-only for debugging; never returned to client
       })
       .returning()

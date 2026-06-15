@@ -78,6 +78,7 @@ SCHEMA CONSTRAINTS (enforce these exactly — the session will be rejected if vi
 - powerFraction must be between 0.10 and 1.80 inclusive. Power fractions above 1.80 are invalid.
 - For safety, keep powerFraction ≤ 1.50 for all blocks. Values between 1.51 and 1.80 will be rejected by the safety gate.
 - durationSec per block: 1 to 5400 seconds (maximum 90 minutes per block).
+- totalDurationSec MUST equal the exact arithmetic sum of all durationSec values in the blocks array. Add them up before outputting. Do not estimate or approximate — the session will be rejected if totalDurationSec does not match the block sum exactly.
 - totalDurationSec: 1 to 14400 seconds (maximum 4 hours total session).
 - blocks array: minimum 1 block, maximum 20 blocks.
 - title: 1 to 100 characters.

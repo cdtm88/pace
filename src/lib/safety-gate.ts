@@ -5,12 +5,12 @@
  * Returns { safe: boolean; reason?: string }. Reason is server-log only — never
  * surface to user. User sees generic "Couldn't generate a valid session." message.
  *
- * Five checks (independent of AI and Zod — defense-in-depth per D-04):
+ * Four checks (independent of AI and Zod — defense-in-depth per D-04):
  *   1. totalDurationSec ≤ 14400 (4h ceiling, also in Zod)
  *   2. No block powerFraction > 1.5 (tighter than Zod's 1.8; STATE.md: "suggested powerFraction ≤ 1.5")
  *   3. ≤ 3 consecutive work blocks without an intervening rest or cooldown
  *   4. blocks.length ≥ 2 (minimum: warmup + one work block)
- *   5. totalDurationSec matches the actual sum of block durations (AI cannot assert a false total)
+ * Note: totalDurationSec is computed server-side from blocks before this gate runs — no equality check needed.
  */
 import type { GeneratedSession } from "@/lib/db/schemas/session";
 
@@ -58,15 +58,6 @@ export function validateSessionSafety(
       // Reset counter on rest, cooldown, or warmup — any non-work block breaks a consecutive sequence
       consecutiveWorkCount = 0;
     }
-  }
-
-  // Check 5: totalDurationSec must equal the actual sum of block durations
-  const blockSum = session.blocks.reduce((sum, b) => sum + b.durationSec, 0);
-  if (blockSum !== session.totalDurationSec) {
-    return {
-      safe: false,
-      reason: `totalDurationSec ${session.totalDurationSec} does not match block sum ${blockSum}`,
-    };
   }
 
   return { safe: true };
