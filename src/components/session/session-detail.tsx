@@ -97,7 +97,10 @@ export function SessionDetail({
             variant="outline"
             className="flex-1"
             onClick={() => {
-              window.location.href = `/api/session/${session.id}/export`;
+              const a = document.createElement("a");
+              a.href = `/api/session/${session.id}/export`;
+              a.download = "";
+              a.click();
             }}
           >
             {COPY.SESSION_PRE_RIDE_EXPORT_BTN}

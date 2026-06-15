@@ -53,7 +53,7 @@ export async function GET(
     return new NextResponse(xml, {
       status: 200,
       headers: {
-        "Content-Type": "application/xml",
+        "Content-Type": "application/octet-stream",
         "Content-Disposition": `attachment; filename="${safeName}.zwo"`,
       },
     });
