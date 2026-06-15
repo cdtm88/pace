@@ -101,7 +101,7 @@ All components exist in the codebase; no new shadcn components need to be instal
 - `src/components/strava/strava-section.tsx` — Strava connection card (connected + disconnected states, COPY-sourced strings)
 - `src/components/strava/tss-chart.tsx` — Recharts BarChart wrapper (ResponsiveContainer + BarChart + XAxis + YAxis + Bar)
 
-**Recharts usage:** Already in `package.json` (project spec). Use `ResponsiveContainer` with explicit `height={300}`. No additional package install needed.
+**Recharts usage:** `recharts@3.8.1` is NOT yet installed (absent from `package.json` at UI research time — see 05-RESEARCH.md). It is installed in 05-03 Wave 3 Task 1 after a blocking legitimacy checkpoint. Once installed, use `ResponsiveContainer` with explicit `height={300}`.
 
 ---
 
