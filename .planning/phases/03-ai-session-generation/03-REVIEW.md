@@ -1,139 +1,139 @@
 ---
 phase: 03-ai-session-generation
-reviewed: 2026-06-14T00:00:00Z
+reviewed: 2026-06-15T00:00:00Z
 depth: standard
-files_reviewed: 14
+files_reviewed: 16
 files_reviewed_list:
-  - src/lib/db/schemas/session.ts
-  - src/lib/safety-gate.ts
-  - tests/session-schema.test.ts
-  - tests/safety-gate.test.ts
-  - src/lib/ratelimit.ts
+  - drizzle/0002_quick_thunderbolt_ross.sql
+  - drizzle/meta/_journal.json
+  - drizzle/meta/0002_snapshot.json
+  - src/app/(app)/dashboard/page.tsx
+  - src/components/session/session-generator.tsx
+  - src/lib/actions/session.ts
+  - src/lib/ai/compute-watts.ts
+  - src/lib/ai/prompt.ts
   - src/lib/db/queries.ts
   - src/lib/db/schema.ts
-  - tests/ratelimit.test.ts
-  - src/lib/ai/prompt.ts
-  - src/lib/ai/compute-watts.ts
-  - src/lib/actions/session.ts
+  - src/lib/db/schemas/session.ts
+  - src/lib/ratelimit.ts
+  - src/lib/safety-gate.ts
   - tests/generate-session.test.ts
-  - src/components/session/session-generator.tsx
-  - src/app/(app)/dashboard/page.tsx
+  - tests/ratelimit.test.ts
+  - tests/safety-gate.test.ts
+  - tests/session-schema.test.ts
 findings:
-  critical: 3
-  warning: 3
-  info: 3
-  total: 9
+  critical: 2
+  warning: 4
+  info: 2
+  total: 8
 status: issues_found
 ---
 
 # Phase 03: Code Review Report
 
-**Reviewed:** 2026-06-14T00:00:00Z
-**Depth:** standard
-**Files Reviewed:** 14
+**Reviewed:** 2026-06-15  
+**Depth:** standard  
+**Files Reviewed:** 16  
 **Status:** issues_found
 
 ## Summary
 
-Phase 3 adds AI session generation: Anthropic API call, dual-gate validation (Zod + safety gate), rate limiting, watt computation, a server action, and dashboard UI. The security posture is generally sound — userId is read from iron-session, the API key is server-only, and generic errors are surfaced to users. Three critical defects were found: the server action returns the full DB row including `rawJson` (raw Anthropic response text) to the client; `ANTHROPIC_API_KEY` and `SESSION_SECRET` are typed `string | undefined` and passed without null-guard to the SDK and iron-session respectively; and `readinessScore` is not validated before being written to the DB or injected into the AI prompt. Three warnings cover a `totalDurationSec` consistency gap, `warmup` blocks not resetting the consecutive-work counter (allowing a covert safety bypass), and the ratelimit test that checks the "Too many attempts" string constant against itself without verifying it matches the actual route handler message.
+Phase 03 adds AI session generation (Claude API), Zod output validation, a safety gate, rate limiting, watt computation, a server action, and dashboard UI. The security posture is sound in most respects: `userId` is always read from iron-session (never from client input), the API key is server-only, and generic error messages are consistently returned to the client.
+
+Two critical defects were found: the markdown fence stripping regex does not handle plain ` ``` ` fences (without the `json` identifier), causing false rejections of valid AI output; and `readinessScore` is accepted from the client without server-side bounds validation before being stored in the database and injected into the AI prompt. Four warnings cover an unhandled DB exception path, an unvalidated `totalDurationSec` field (AI can lie about session duration), a silent success failure when DB insert returns an empty array, and a `warmup` block not resetting the consecutive-work counter. Two test-quality info items round out the findings.
+
+---
 
 ## Critical Issues
 
-### CR-01: Full DB row including `rawJson` returned to client
+### CR-01: Markdown fence regex misses plain ` ``` ` fences — valid AI output is silently rejected
 
-**File:** `src/lib/actions/session.ts:149-165`
+**File:** `src/lib/actions/session.ts:116-118`  
+**Severity:** Critical
 
-**Issue:** `db.insert(...).returning()` returns every column of the inserted row, including `rawJson: text("raw_json")` which contains the raw Anthropic API response. The action returns `{ data: inserted }` directly to the client component (`session-generator.tsx`). The comment on line 160 says "stored server-only for debugging; never returned to client" — this is false: `.returning()` with no column list returns all columns, and the whole object is shipped to the browser.
+**Issue:** The stripping regex `/^```json?\n?/` breaks down as: literal backticks, then the literal characters `j`, `s`, `o`, `n?` (only the trailing `n` is optional). It matches ` ```json ` or ` ```jso ` but **not** plain ` ``` ` (no language identifier). Claude regularly emits ` ``` ` rather than ` ```json ` despite the system prompt's instruction ("No code fences"). When that happens, the leading ` ``` ` survives the replace and `JSON.parse` throws, returning "Couldn't generate a valid session" to the user even though the AI produced fully valid JSON.
 
-In addition to leaking internal AI response text, this sends the full `blocks` JSONB blob, `readinessScore`, and every other column to an untrusted client when only `title`, `totalDurationSec`, and `blocks` are consumed in the UI.
+Verified by runtime test:
+```
+Input:  "```\n{\"title\":\"Test\",...}\n```"
+After strip: "```\n{\"title\":\"Test\",...}"   ← leading fence remains
+JSON.parse → SyntaxError: Unexpected token '`'
+```
 
-**Fix:** Project only the columns needed for the UI response, or strip `rawJson` before returning:
-
+**Fix:**
 ```typescript
-// Option A — select only what the UI needs:
-const [inserted] = await db
-  .insert(trainingSessions)
-  .values({ ... })
-  .returning({
-    id: trainingSessions.id,
-    title: trainingSessions.title,
-    totalDurationSec: trainingSessions.totalDurationSec,
-    blocks: trainingSessions.blocks,
-    notes: trainingSessions.notes,
-    readinessScore: trainingSessions.readinessScore,
-    createdAt: trainingSessions.createdAt,
-  })
-
-// Option B — strip before returning:
-const { rawJson: _raw, ...safeInserted } = inserted
-return { data: safeInserted }
+const stripped = rawText
+  .replace(/^```(?:json)?\s*\n?/, '')   // matches ```json AND plain ```
+  .replace(/\n?```\s*$/, '')
+  .trim()
 ```
 
 ---
 
-### CR-02: `ANTHROPIC_API_KEY` is `string | undefined` — undefined crashes the Anthropic SDK silently or produces misleading auth errors
+### CR-02: `readinessScore` accepted from client without server-side validation
 
-**File:** `src/env.ts:33` / `src/lib/actions/session.ts:74`
+**File:** `src/lib/actions/session.ts:51-52, 92, 155`  
+**Severity:** Critical
 
-**Issue:** `ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY` is typed `string | undefined`. When the env var is absent the Anthropic SDK receives `undefined` as `apiKey`. The SDK constructor accepts `string | undefined` and falls back to its own `ANTHROPIC_API_KEY` env lookup, so the call may succeed in development but fail in production in a way that is hard to trace. There is no startup guard. The same applies to `SESSION_SECRET` in `src/lib/session.ts:33` where `process.env.SESSION_SECRET as string` papers over the `undefined` with a type cast — if the var is absent iron-session will encrypt cookies with an empty string, making sessions trivially forgeable.
+**Issue:** `generateSessionAction(readinessScore: number)` is a Server Action callable from any HTTP client. The value is written directly to the `readiness_score` column (line 155) and injected into the Claude user prompt (line 92) without any server-side bounds or integer check. A caller can send `-999`, `99`, `1.5`, or `NaN`:
 
-**Fix:** Validate required secrets at import time and throw an explicit error:
+1. **DB integrity:** Postgres stores whatever integer it receives. A float like `1.5` may coerce or cause a driver error; `NaN` will raise a runtime exception at the DB layer (uncaught — see WR-01).
+2. **Prompt injection via numeric field:** Out-of-range values are interpolated directly into the user prompt at `prompt.ts:199` as `"Readiness today: -999/3 (Unknown)"`. Unvalidated user input reaches the LLM.
+3. **Rate limit still consumed:** The rate limit check (line 66) runs before any input validation; bad requests still consume the user's daily quota.
 
+Client-side button gating (`disabled={readiness === null}`) does not protect server actions.
+
+**Fix:**
 ```typescript
-// src/env.ts
-function requireEnv(name: string): string {
-  const val = process.env[name];
-  if (!val) throw new Error(`Missing required environment variable: ${name}`);
-  return val;
+// At the top of generateSessionAction, immediately after the auth check:
+if (!Number.isInteger(readinessScore) || readinessScore < 0 || readinessScore > 3) {
+  return { error: 'Invalid readiness score.' }
 }
-
-export const ANTHROPIC_API_KEY = requireEnv('ANTHROPIC_API_KEY');
-export const SESSION_SECRET = requireEnv('SESSION_SECRET');
-// ... etc.
-```
-
-For `SESSION_SECRET` in `session.ts`, remove the `as string` cast and import from `@/env` instead of reading `process.env` directly.
-
----
-
-### CR-03: `readinessScore` is not validated before DB write or AI prompt injection
-
-**File:** `src/lib/actions/session.ts:51-92`
-
-**Issue:** `generateSessionAction(readinessScore: number)` is a Server Action callable from any client. The `readinessScore` parameter is written directly to `trainingSessions.readinessScore` (line 155) and injected into the AI user prompt via `buildUserPrompt(profile, readinessScore)` (line 92) without any bounds or integer check. A malicious caller can pass `-999`, `999`, `1.5`, or `NaN`. Consequences:
-
-1. An out-of-range integer is persisted to the `readiness_score integer` column without error (Postgres accepts any integer).
-2. `READINESS_LABELS[readinessScore]` returns `undefined` for any value outside `{0,1,2,3}`, falling back to `"Unknown"` — but the raw number (e.g. `-999`) is still injected into the prompt as `Readiness today: -999/3 (Unknown)`, which could skew session generation and represents unvalidated user input reaching the LLM prompt.
-
-**Fix:** Validate at the top of the action before any work:
-
-```typescript
-import { z } from 'zod'
-
-const readinessScoreSchema = z.number().int().min(0).max(3)
-
-export async function generateSessionAction(readinessScore: number) {
-  const parsedReadiness = readinessScoreSchema.safeParse(readinessScore)
-  if (!parsedReadiness.success) {
-    return { error: 'Invalid readiness score.' }
-  }
-  // use parsedReadiness.data from here on
 ```
 
 ---
 
 ## Warnings
 
-### WR-01: `totalDurationSec` is AI-asserted and not verified against the actual sum of block durations
+### WR-01: DB insert has no try/catch — unhandled exception escapes the action's error contract
 
-**File:** `src/lib/safety-gate.ts:20` / `src/lib/actions/session.ts:159`
+**File:** `src/lib/actions/session.ts:149-165`  
+**Severity:** Warning
 
-**Issue:** The safety gate checks `session.totalDurationSec > 14400` but never computes `blocks.reduce((s, b) => s + b.durationSec, 0)` and compares it to `totalDurationSec`. The AI can assert `totalDurationSec: 2700` while the blocks actually sum to 10,800 seconds (or vice versa). The wrong duration is then stored in the DB and displayed to the user in the UI summary card. There is no Zod constraint enforcing consistency either. This is an agreed defense-in-depth gap.
+**Issue:** The Anthropic call (line 73) and `JSON.parse` (line 121) are each wrapped in try/catch with structured error returns. The DB insert at line 149 is not. If the Neon connection is unavailable, a constraint fails, or the driver throws for any other reason, the exception propagates uncaught out of the server action. Next.js will surface a generic 500 to the client, bypassing the `{ error: string }` contract that `session-generator.tsx` expects. Users see a broken page instead of the inline error banner.
 
-**Fix:** Add a fifth safety-gate check:
-
+**Fix:**
 ```typescript
-// Check 5: totalDurationSec must match actual sum of block durations
+let inserted: typeof trainingSessions.$inferSelect | undefined
+try {
+  ;[inserted] = await db
+    .insert(trainingSessions)
+    .values({ userId, title: ..., /* ... */ })
+    .returning()
+} catch {
+  return { error: 'Failed to save session. Please try again.' }
+}
+
+if (!inserted) {
+  // See WR-04: returning() can yield [] on certain DB edge cases
+  return { error: 'Failed to save session. Please try again.' }
+}
+
+return { data: inserted }
+```
+
+---
+
+### WR-02: `totalDurationSec` is AI-asserted and never validated against the actual sum of block durations
+
+**File:** `src/lib/safety-gate.ts:9-23`, `src/lib/db/schemas/session.ts:26`  
+**Severity:** Warning
+
+**Issue:** The safety gate's Check 1 verifies `session.totalDurationSec > 14400` but never computes `blocks.reduce((s, b) => s + b.durationSec, 0)` and compares it to the claimed total. The AI can assert `totalDurationSec: 1` (passes Zod's `positive()` and the safety ceiling) while the blocks themselves sum to 13,200 seconds. The stored record will have a factually wrong `total_duration_sec` field. Any downstream feature that trusts this field — Phase 4 `.zwo` export duration, Phase 5 Strava matching — will produce incorrect output.
+
+**Fix:** Add a fifth check to the safety gate:
+```typescript
+// After Check 4 (block count), before returning safe:
 const blockSum = session.blocks.reduce((sum, b) => sum + b.durationSec, 0)
 if (blockSum !== session.totalDurationSec) {
   return {
@@ -143,99 +143,70 @@ if (blockSum !== session.totalDurationSec) {
 }
 ```
 
+Alternatively, compute the sum in `generateSessionAction` and overwrite `zodResult.data.totalDurationSec` before the DB insert, discarding the AI's value entirely.
+
 ---
 
-### WR-02: `warmup` blocks do not reset the consecutive-work counter — a session starting with work blocks after an initial warmup can accumulate 4+ consecutive work-adjacent intervals
+### WR-03: `warmup` type does not reset the consecutive-work counter — mid-session warmup blocks can mask an unsafe sequence
 
-**File:** `src/lib/safety-gate.ts:46-61`
+**File:** `src/lib/safety-gate.ts:46-61`  
+**Severity:** Warning
 
-**Issue:** The comment on line 60 says "warmup only appears at session start" and deliberately skips resetting `consecutiveWorkCount` for warmup. However the Zod schema does not enforce that warmup blocks can only appear first — `type: z.enum(["warmup", "work", "rest", "cooldown"])` is free on every block. If the AI generates `work, warmup, work, work, work` (an unconventional but schema-valid sequence), the `warmup` in position 2 does not reset the counter, so blocks 1 + 3 + 4 + 5 would accumulate 4 consecutive work-category intervals without triggering the gate. More practically, if the AI hallucinates a warmup mid-session the safety check silently ignores it.
+**Issue:** The comment at line 60 states "warmup only appears at session start" and intentionally skips resetting `consecutiveWorkCount` when block type is `warmup`. However, neither the Zod schema nor any other gate enforces that position constraint — `type: z.enum(["warmup", "work", "rest", "cooldown"])` is valid on any block. If the AI generates `[work, work, work, warmup, work, work, work, work]`, the `warmup` at position 4 does not reset the counter. The first three `work` blocks accumulate a count of 3 (allowed). Then `warmup` is skipped. Then four more `work` blocks run the counter to 7 before the gate fires — but only on the 7th, which is past the threshold that should have triggered at block 5 (4th consecutive work). The gate fires too late for this pattern.
 
-Additionally, the current logic means `warmup, work, work, work, work` passes the gate (counter starts at 0 after warmup is skipped; then hits 4 work blocks — counter reaches 4 which is `> 3`, so it does fail). However, if there were two warmup blocks sandwiching something, the logic is unintuitive. The safest fix is to treat `warmup` the same as `rest`/`cooldown` for counter reset purposes since an intervening warmup block does break up the work load.
-
-**Fix:**
-
+**Fix:** Treat `warmup` as a counter-resetter, since any non-work block in the sequence breaks up continuous high-intensity load:
 ```typescript
-} else if (block.type === "rest" || block.type === "cooldown" || block.type === "warmup") {
-  consecutiveWorkCount = 0;
+} else if (block.type === 'rest' || block.type === 'cooldown' || block.type === 'warmup') {
+  consecutiveWorkCount = 0
 }
+// Remove the "warmup does not reset" comment
 ```
 
 ---
 
-### WR-03: Ratelimit test "D-10 no timing info" asserts a constant against itself — no coverage of the actual route handler message
+### WR-04: Silent success failure when DB `.returning()` yields an empty array
 
-**File:** `tests/ratelimit.test.ts:84-88`
+**File:** `src/lib/actions/session.ts:149-165`  
+**Severity:** Warning
 
-**Issue:** The test at line 84 titled "returns generic 'Too many attempts' message with no timing info on 429 (D-10)" does the following:
-
-```typescript
-const MESSAGE = "Too many attempts. Try again in a few minutes.";
-expect(MESSAGE).toBe("Too many attempts. Try again in a few minutes.");
-```
-
-This asserts a local variable equals itself. It will always pass regardless of what the actual login route handler returns. There is no reference to the real route handler string, no import, and no assertion against the source-of-truth. If the route handler changes its message this test will not catch the regression.
-
-**Fix:** Extract the 429 message string to a shared constant importable from both the route handler and the test, then assert the import:
-
-```typescript
-// src/lib/copy.ts or src/lib/errors.ts
-export const RATE_LIMIT_MESSAGE = "Too many attempts. Try again in a few minutes."
-
-// tests/ratelimit.test.ts
-import { RATE_LIMIT_MESSAGE } from "@/lib/errors"
-// ... in the test body:
-expect(actualRouteResponse.body.error).toBe(RATE_LIMIT_MESSAGE)
-```
+**Issue:** `const [inserted] = await db.insert(...).returning()` destructures the first element of the returned array. If `.returning()` resolves to `[]` (possible under certain constraint or driver edge cases), `inserted` is `undefined` and `{ data: undefined }` is returned to the client. The client in `session-generator.tsx` evaluates `const sessionData = result?.data` — `undefined` is falsy, so neither the success card nor the error banner renders. The user sees the button return to idle with no feedback, and their daily rate limit is consumed. The fix is combined with WR-01 above (null-check on `inserted` before returning).
 
 ---
 
 ## Info
 
-### IN-01: `GeneratedSession` type imported but only used for a cast in session-generator — `unknown` blocks type widens the safety
+### IN-01: Ratelimit test asserts a string constant against itself — catches no real regression
 
-**File:** `src/components/session/session-generator.tsx:33,157`
+**File:** `tests/ratelimit.test.ts:84-88`  
+**Severity:** Info
 
-**Issue:** `GeneratedSession` is imported for the sole purpose of the cast `sessionData.blocks as GeneratedSession["blocks"]` on line 157. The `SessionSummary` type on line 39 declares `blocks: unknown`, so the cast provides no runtime safety — if the JSONB column ever returns something unexpected, `.length` will throw at runtime.
+**Issue:** The test "returns generic 'Too many attempts' message with no timing info on 429 (D-10)" creates a local string literal and asserts it equals itself:
+```typescript
+const MESSAGE = "Too many attempts. Try again in a few minutes.";
+expect(MESSAGE).toBe("Too many attempts. Try again in a few minutes."); // always passes
+```
+If the actual login route handler changes its message, this test will not catch the drift.
 
-**Fix:** Either narrow the type properly using `Array.isArray` (already done) and avoid the cast, or define `blocks` in `SessionSummary` as `GeneratedSession["blocks"] | unknown[]` to avoid the unsafe cast. The `GeneratedSession` import from a server-only schema module should be verified that it does not pull server-only code into the client bundle (tree-shaking should handle this since only the type is used, but confirm with a bundle analysis in CI).
+**Fix:** Extract the message to a shared constant in the route handler and import it in the test, or replace the test with one that actually exercises the route response.
 
 ---
 
-### IN-02: `console.log` left in production path for cache stats
+### IN-02: `console.log` for token usage fires unconditionally in production
 
-**File:** `src/lib/actions/session.ts:100-106`
+**File:** `src/lib/actions/session.ts:100-106`  
+**Severity:** Info
 
-**Issue:** Token usage including `cacheCreationInputTokens` and `cacheReadInputTokens` is logged via `console.log` on every successful generation call. While intentional for debugging, this logs on every production request and may expose spend patterns to anyone with Vercel log access. At minimum it should use a structured logger or be gated on `process.env.NODE_ENV !== 'production'`.
+**Issue:** Token usage (`cacheCreationInputTokens`, `cacheReadInputTokens`, etc.) is logged via `console.log` on every successful generation call regardless of environment. This is noisy in production Vercel logs and exposes spending metadata to anyone with log access.
 
 **Fix:**
-
 ```typescript
 if (process.env.NODE_ENV !== 'production' && msg.usage) {
-  // ... console.log(...)
+  console.log('[generateSessionAction] token usage:', { ... })
 }
 ```
 
-Or use a structured logging library with appropriate log levels.
-
 ---
 
-### IN-03: `READINESS_LABELS` exported as a plain `Record<number, string>` — safe but fragile for out-of-range keys
-
-**File:** `src/lib/ai/prompt.ts:28-33`
-
-**Issue:** `READINESS_LABELS` has keys `0–3`. The `?? "Unknown"` fallback in `buildUserPrompt` on line 183 handles missing keys, but the type `Record<number, string>` implies any `number` key is present (TypeScript will not warn on `READINESS_LABELS[99]`). Combined with the missing `readinessScore` validation (CR-03), this is a contributing factor to silent fallback behavior. Low severity on its own but worth tightening.
-
-**Fix:** Type the key as a union literal:
-
-```typescript
-export const READINESS_LABELS: Record<0 | 1 | 2 | 3, string> = { ... }
-```
-
-This makes TypeScript warn when an out-of-range number is used as a key.
-
----
-
-_Reviewed: 2026-06-14T00:00:00Z_
-_Reviewer: Claude (gsd-code-reviewer)_
+_Reviewed: 2026-06-15_  
+_Reviewer: Claude (gsd-code-reviewer)_  
 _Depth: standard_
