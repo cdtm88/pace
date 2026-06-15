@@ -67,3 +67,4 @@ describe("findUserProfileByUserId", () => {
     expect(typeof findUserProfileByUserId).toBe("function");
   });
 });
+
