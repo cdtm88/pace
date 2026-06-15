@@ -45,52 +45,100 @@ Exceptions:
 - Touch target minimum: 48×48px for all interactive controls (PWA-03 pre-condition; riding view tap area fills full viewport height — no explicit size needed).
 - Riding view watt numeral container: `min-h-dvh` (dynamic viewport height) — not a spacing token, a layout unit.
 - Sticky action row height: 64px (4px grid) with 16px horizontal padding.
+- Screen gutter: 16–20px + `env(safe-area-inset-left/right)` so content is never clipped by notches.
 
-Source: Established in Phase 1 UI-SPEC; confirmed from existing component patterns (`h-12` = 48px on all buttons in `session-generator.tsx`).
+### Border Radius (from design.md §4.5)
+
+| Element | Radius |
+|---------|--------|
+| Cards | 16px (`rounded-2xl`) |
+| Buttons, fields | 12px (`rounded-xl`) |
+| Pills / zone badges / chips | 999px (`rounded-full`) |
+| Full-bleed sheets | 20px top corners |
+
+### Motion (from design.md §4.5)
+
+- State transitions (sub-state machine: pre-ride → riding → complete): 150–220ms `ease-out`
+- Block advance watt numeral transition: 150ms ease-out
+- No infinite loops or auto-advancing content
+- Honor `prefers-reduced-motion`: skip transitions when set
+
+Source: design.md §4.5; existing component patterns (`h-12` = 48px on all buttons in `session-generator.tsx`).
 
 ---
 
 ## Typography
 
-Two weights only: **400 (regular)** for all content roles; **900 (black)** for the riding-view watt numeral. The 14/16/20/120px size spread provides sufficient hierarchy without weight variation.
-
 | Role | Size | Weight | Line Height | Usage |
 |------|------|--------|-------------|-------|
 | Body | 16px | 400 (regular) | 1.5 | Block row text, badge row, helper text |
-| Label | 14px | 400 (regular) | 1.4 | Block type label, duration label, block counter, zone/RPE label (secondary in riding view) |
-| Heading | 20px | 400 (regular) | 1.2 | Session title on pre-ride screen |
-| Display | 120px | 900 (black) | 1.0 | Watt numeral in riding view — `text-[120px] font-black leading-none tabular-nums` |
+| Label / section header | 13px | 600 (semibold) | 1.3 | Section labels in ALLCAPS, `letter-spacing: 0.08em`, `--ink-muted` color |
+| Sub-label | 14px | 400 (regular) | 1.4 | Block type, duration, block counter, zone/RPE secondary line |
+| Heading | 24px | 600 (semibold) | 1.1 | Session title on pre-ride screen |
+| Display | 96–120px | 700 (bold) | 1.0 | Watt numeral in riding view — `text-[108px] font-bold leading-none tabular-nums` |
 
 Notes:
-- The display size (120px) is Claude's discretion per CONTEXT.md. It fills approximately 60–70% of a 390px-wide iPhone viewport at one digit (e.g., "280"). Use `tabular-nums` to prevent numeral width jitter between blocks.
-- All input fields elsewhere in the app use 16px minimum (PWA-05 compliance, already established).
+- Display size: 108px default (fills ~65% of a 390px viewport for 3-digit watts without clipping). Never below 72px per design.md §4.4. Use `tabular-nums` (`font-variant-numeric: tabular-nums`) to prevent width jitter as digits change.
+- Section labels (e.g., "BLOCK 4 / 9", "NEXT", "SESSION PROFILE") use 13px/600 uppercase with `letter-spacing: 0.08em` in `--ink-muted`.
+- Heading weight is **600 (semibold), not 400** — per design.md §4.4 "Headings 24–28px/600".
+- Watt numeral weight is **700 (bold), not 900** — per design.md §4.4 "96–120px, weight 700".
+- All input fields use 16px minimum (PWA-05 compliance, already established).
 
-Source: Display size from CONTEXT.md / RESEARCH.md Pattern 2 discretion; weights collapsed to 400/900 per two-weight rule.
+Source: design.md §4.4.
 
 ---
 
 ## Color
 
-| Role | Value | Usage |
-|------|-------|-------|
-| Dominant (60%) | `#09090b` zinc-950 (`--background`) | Page background — riding view full-screen, pre-ride page background |
-| Secondary (30%) | `#18181b` zinc-900 (`--card`) | Pre-ride block list card surface, session complete card |
-| Accent (10%) | `#ffffff` white (`--primary`) | "Start session" button, "Export .zwo" button (variant="default"), session complete CTA |
-| Muted text | `#a1a1aa` zinc-400 (`--muted-foreground`) | Block counter "2 / 6", duration labels, zone label in riding view (secondary hierarchy) |
-| Destructive | `#ef4444` red-500 (`--destructive`) | Export server error message only |
+> The ride view is **always dark** (battery + outdoor glare). The rest of the app may be light; these tokens cover the dark mode used throughout Phase 4.
 
-Accent (`--primary` white) reserved for:
-1. "Start session" button (pre-ride sticky action row, variant="default")
-2. "Export .zwo" button (pre-ride sticky action row, variant="outline" — white border/text on dark)
-3. "Back to dashboard" link/button on session complete state
+### Base palette (from design.md §4.1)
 
-Zone label badge (when FTP set) color: `--secondary` (`#27272a` zinc-800) background with `--foreground` (`#fafafa`) text — styled as an inline pill badge using `bg-secondary text-secondary-foreground rounded-full px-2 py-0.5 text-xs`.
+| Token | Dark value | Usage |
+|-------|-----------|-------|
+| `--bg` | `#141414` | Page / ride-view background (replaces zinc-950) |
+| `--surface` | `#1E1E1E` | Cards, pre-ride block list surface |
+| `--surface-2` | `#2A2A2A` | Insets, secondary card surfaces |
+| `--ink` | `#F4F2EC` | Primary text — watt numeral, session title, block watts |
+| `--ink-muted` | `#A6A299` | Block counter, duration labels, zone label (secondary in riding view) |
+| `--border` | `#343434` | Card hairlines |
+| `--accent` | `#FF6A37` | **Primary action color** — "Start ride" button fill, active segment, current block highlight |
+| `--accent-ink` | `#141414` | Text on accent-filled buttons |
+| `--danger` | `#FF6B5E` | Export error message only |
+| `--success` | `#54C98A` | Confirmations (not used in Phase 4 — reserved for Phase 5 Strava match) |
 
-RPE label (no-FTP path): plain text, `text-muted-foreground`, no badge background.
+> **Accent is orange (`#FF6A37`), not white.** This is the energetic live/active color per design.md. Do not confuse with Strava's `#FC4C02` — the "Connect with Strava" button always uses Strava's brand orange; all other primary actions use `#FF6A37`.
 
-Watt numeral in riding view: `text-foreground` (`#fafafa` zinc-50) — maximum contrast against `#09090b` dominant background.
+### Power zone palette — Coggan Z1–Z7 (from design.md §4.2)
 
-Source: `globals.css` dark palette with comments, established in Phase 1 UI-SPEC.
+Used for zone label pills when FTP is set. **Never use these colors in no-FTP mode** — use RPE scale instead.
+
+| Zone | Name | % FTP | Color |
+|------|------|-------|-------|
+| Z1 | Active Recovery | < 55% | `#9AA0A6` |
+| Z2 | Endurance | 56–75% | `#3B82C4` |
+| Z3 | Tempo | 76–90% | `#2FA36B` |
+| Z4 | Threshold | 91–105% | `#E0B23A` |
+| Z5 | VO₂ Max | 106–120% | `#E8730E` |
+| Z6 | Anaerobic | 121–150% | `#D8443B` |
+| Z7 | Neuromuscular | > 150% | `#8A4FD0` |
+
+Zone label pill: background = zone color at 15% opacity, text = zone color at full saturation. Tailwind: use inline `style={{ backgroundColor: zoneColor + '26', color: zoneColor }}` on the pill element.
+
+### RPE scale (no-FTP mode, from design.md §4.3)
+
+`Easy · Moderate · Hard · Very Hard` — mapped to readiness/intensity. Use a single-hue ramp of `--accent` (light → saturated), **not** the zone palette.
+
+| Label | Approx effort | Accent tint |
+|-------|--------------|-------------|
+| Easy | ~3/10 | `#FF6A37` at 40% opacity |
+| Moderate | ~5/10 | `#FF6A37` at 65% opacity |
+| Hard | ~7/10 | `#FF6A37` at 85% opacity |
+| Very Hard | ~9/10 | `#FF6A37` at 100% (full) |
+
+RPE label pill: same pill shape as zone label; background = accent tint from above; text = `#141414` (`--accent-ink`) for adequate contrast at full/85% tint, `#F4F2EC` (`--ink`) for 40–65% tint.
+
+Source: design.md §4.1–4.3.
 
 ---
 
@@ -143,6 +191,8 @@ New components for this phase:
 |-----------|------|------|-------------|
 | `SessionDetail` | `src/components/session/session-detail.tsx` | Client Component | Sub-state machine: pre-ride / riding / complete |
 | `SessionBlockRow` | `src/components/session/session-block-row.tsx` | Client Component (child) | Single block list row for pre-ride view |
+| `IntervalProfile` | `src/components/session/interval-profile.tsx` | Client Component | Horizontal bar chart of session blocks; bar color = zone color (FTP) or accent tint (no-FTP); height prop for 3 sizes |
+| `ZonePill` | `src/components/session/zone-pill.tsx` | Client Component | Zone label pill — background/text uses zone color from Z1–Z7 palette; RPE variant uses accent tint ramp |
 
 Existing components reused (no changes):
 
@@ -160,12 +210,22 @@ No new shadcn components need to be installed for this phase.
 
 ### Pre-Ride View
 
+Layout (top to bottom):
+1. "← Today" back nav link
+2. Session title (24px/600)
+3. Session subtitle — "Generated for '{readiness label}' · {goal context}" (muted)
+4. **Interval profile bar chart** — horizontal bar chart of blocks; bar height = relative intensity, color = zone color (FTP mode) or accent tint (no-FTP mode); current block not highlighted pre-ride. Height: 64–70px. This is the `IntervalProfile` component from design.md §5.
+5. Stat tiles row (FTP: TSS / duration / IF; no-FTP: ~duration / intensity word)
+6. No-FTP nudge banner (dashed border, `💡 Add FTP to unlock TSS & watt-accurate .zwo export.`) — shown only when FTP absent
+7. Sticky action row (bottom): "Start ride" + "Export .zwo"
+
 | Element | Interaction | Behavior |
 |---------|-------------|----------|
-| "Export .zwo" button | tap | Triggers `GET /api/session/[id]/export`; browser downloads file. Button does not navigate away. |
-| "Start session" button | tap | Sets sub-state to `"riding"`, `blockIndex` to `0`. No URL change. |
+| "Export .zwo" button | tap | Triggers `GET /api/session/[id]/export`; browser downloads file. Button does not navigate away. Variant: `outline` — `--accent` border and text on dark background. |
+| "Start ride" button | tap | Sets sub-state to `"riding"`, `blockIndex` to `0`. No URL change. Variant: `primary` — `--accent` fill (`#FF6A37`), `--accent-ink` text (`#141414`). |
+| Interval profile | display only | Static render — no interaction in Phase 4. |
 | Block list | scroll | Scrollable container (`overflow-y-auto`) — list may exceed viewport on long sessions. |
-| Sticky action row | fixed position | `position: sticky; bottom: 0` with `bg-background` fill to prevent content bleed-through. Height: 64px, padding: 16px horizontal, 8px vertical, `gap-3` between buttons. |
+| Sticky action row | fixed position | `position: sticky; bottom: 0; padding-bottom: env(safe-area-inset-bottom)` with `background: --bg` fill. Height: 64px, padding: 16px horizontal, 8px vertical, `gap-3` between buttons. |
 
 ### Riding View
 
