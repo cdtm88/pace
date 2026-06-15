@@ -11,7 +11,7 @@
  * Phase 5 will add Strava match status to the complete state.
  */
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { SessionBlockRow } from "@/components/session/session-block-row";
@@ -48,6 +48,7 @@ export function SessionDetail({
 }: SessionDetailProps) {
   const [subState, setSubState] = useState<SubState>("pre-ride");
   const [blockIndex, setBlockIndex] = useState(0);
+  const exportRef = useRef<HTMLAnchorElement>(null);
 
   function advance() {
     if (blockIndex < blocks.length - 1) {
@@ -93,36 +94,20 @@ export function SessionDetail({
 
         {/* Sticky action row — 64px, Export + Start (D-07) */}
         <div className="sticky bottom-0 flex h-16 items-center gap-3 border-t border-border bg-background px-4">
+          {/* Hidden anchor in DOM — synchronous user-gesture click; avoids async
+              context loss that makes Chrome ignore a.download on blob URLs. */}
+          <a
+            ref={exportRef}
+            href={`/api/session/${session.id}/export`}
+            download
+            className="hidden"
+            aria-hidden="true"
+            tabIndex={-1}
+          />
           <Button
             variant="outline"
             className="flex-1"
-            onClick={async () => {
-              try {
-                const res = await fetch(`/api/session/${session.id}/export`);
-                if (!res.ok) throw new Error("Export failed");
-                const blob = await res.blob();
-                // Compute filename client-side from the title we already have —
-                // bypasses Safari's inconsistent Content-Disposition handling during
-                // page navigation.
-                const safeName =
-                  session.title
-                    .toLowerCase()
-                    .replace(/[^a-z0-9-_]/g, "-")
-                    .replace(/-+/g, "-")
-                    .replace(/^-+|-+$/g, "")
-                    .slice(0, 50) || "pace-session";
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement("a");
-                a.href = url;
-                a.download = `${safeName}.zwo`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-              } catch {
-                alert(COPY.SESSION_EXPORT_ERROR);
-              }
-            }}
+            onClick={() => exportRef.current?.click()}
           >
             {COPY.SESSION_PRE_RIDE_EXPORT_BTN}
           </Button>
