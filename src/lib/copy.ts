@@ -108,4 +108,20 @@ export const COPY = {
   SESSION_DASHBOARD_VIEW_LINK: "View session",
   SESSION_BLOCK_COUNTER: "{current} / {total}",
   SESSION_EXPORT_ERROR: "Export failed. Please try again.",
+
+  // ── Phase 5: Activity upload ─────────────────────────────────────────────────
+
+  UPLOAD_CARD_TITLE: "Log a Ride",
+  UPLOAD_CARD_DESCRIPTION: "Upload a .fit file from your Garmin, Wahoo, or Zwift ride.",
+  UPLOAD_BTN: "Upload .fit file",
+  UPLOAD_BTN_LOADING: "Uploading…",
+  UPLOAD_SUCCESS_MATCHED: "Logged — matched to {title}",
+  UPLOAD_SUCCESS_UNMATCHED: "Logged — no session matched for this date",
+  UPLOAD_ERROR_INVALID: "File couldn't be read — make sure it's a .fit file",
+  UPLOAD_ERROR_TOO_LARGE: "That file is over the 4 MB limit.",
+  UPLOAD_ERROR_GENERIC: "Upload failed. Please try again.",
+  UPLOAD_DELETE_BTN: "Delete",
+  CHART_TSS_TITLE: "Training load",
+  CHART_TSS_DESCRIPTION: "Weekly TSS · 6-week window",
+  CHART_TSS_EMPTY_LABEL: "Upload .fit files to see your training load",
 } as const;
