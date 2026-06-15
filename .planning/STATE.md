@@ -4,7 +4,7 @@ milestone: v1.0
 milestone_name: milestone
 status: executing
 stopped_at: context exhaustion at 75% (2026-06-15)
-last_updated: "2026-06-15T10:37:43.285Z"
+last_updated: "2026-06-15T11:36:14.640Z"
 last_activity: 2026-06-15 -- Phase 05 execution started
 progress:
   total_phases: 6
@@ -21,11 +21,11 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-14)
 
 **Core value:** The full loop must work end-to-end: AI generates a session from your profile, you ride it, and it's logged against the plan.
-**Current focus:** Phase 05 — strava-integration
+**Current focus:** Phase 05 — Activity Upload
 
 ## Current Position
 
-Phase: 05 (strava-integration) — EXECUTING
+Phase: 05 (Activity Upload) — EXECUTING
 Plan: 1 of 3
 Phase: 05 (strava-integration) — NOT STARTED
 Status: Executing Phase 05

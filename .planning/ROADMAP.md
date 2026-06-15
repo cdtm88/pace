@@ -145,7 +145,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 **Wave 1**
 
-  - [ ] 05-01-PLAN.md — activity_uploads schema (DROP strava_connections, CREATE activity_uploads) + IDOR-safe upload query helpers + estimateRideTSS + matchActivity pure functions + vitest setup + fit test scaffolds
+  - [x] 05-01-PLAN.md — activity_uploads schema (DROP strava_connections, CREATE activity_uploads) + IDOR-safe upload query helpers + estimateRideTSS + matchActivity pure functions + vitest setup + fit test scaffolds
 
 **Wave 2** *(blocked on Wave 1)*
 
@@ -184,5 +184,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 2. Profile & Onboarding | 3/3 | Complete   | 2026-06-14 |
 | 3. AI Session Generation | 3/3 | Complete   | 2026-06-14 |
 | 4. Today View & Export | 3/3 | Complete | 2026-06-15 |
-| 5. Activity Upload | 0/3 | Planned | - |
+| 5. Activity Upload | 1/3 | In Progress|  |
 | 6. PWA & Polish | 0/TBD | Not started | - |
