@@ -5,43 +5,44 @@
  *
  * Implements: T-1-01 (IDOR — FK + index from day one)
  * See: CONTEXT.md D-01, RESEARCH.md Pattern 3
+ *
+ * Note: Drizzle internal symbols accessed via (table as unknown as Record<symbol, ...>)
+ * to avoid TS7053 — Symbol.for() keys are not in PgTable's index signature.
  */
 import { describe, it, expect } from "vitest";
 import {
   users,
   userProfiles,
   trainingSessions,
-  stravaConnections,
+  activityUploads,
 } from "@/lib/db/schema";
+
+// Helper: access Drizzle internal symbol-keyed properties without TS7053
+function drizzleCols(table: unknown): Record<string, { name: string; notNull: boolean; isUnique?: boolean }> {
+  return (table as Record<symbol, unknown>)[Symbol.for("drizzle:Columns")] as Record<string, { name: string; notNull: boolean; isUnique?: boolean }>;
+}
+function drizzleName(table: unknown): string {
+  return (table as Record<symbol, unknown>)[Symbol.for("drizzle:Name")] as string;
+}
 
 describe("users table", () => {
   it("has an id column as primary key", () => {
-    const cols = users[Symbol.for("drizzle:Columns")];
+    const cols = drizzleCols(users);
     expect(cols).toBeDefined();
-    const idCol = Object.values(cols as Record<string, unknown>).find(
-      (c: unknown) => (c as { name: string }).name === "id"
-    );
+    const idCol = Object.values(cols).find((c) => c.name === "id");
     expect(idCol).toBeDefined();
   });
 
   it("has email as notNull and unique", () => {
-    const cols = users[Symbol.for("drizzle:Columns")] as Record<
-      string,
-      { name: string; notNull: boolean; isUnique: boolean }
-    >;
+    const cols = drizzleCols(users);
     const emailCol = Object.values(cols).find((c) => c.name === "email");
     expect(emailCol).toBeDefined();
     expect(emailCol!.notNull).toBe(true);
   });
 
   it("has passwordHash as notNull", () => {
-    const cols = users[Symbol.for("drizzle:Columns")] as Record<
-      string,
-      { name: string; notNull: boolean }
-    >;
-    const hashCol = Object.values(cols).find(
-      (c) => c.name === "password_hash"
-    );
+    const cols = drizzleCols(users);
+    const hashCol = Object.values(cols).find((c) => c.name === "password_hash");
     expect(hashCol).toBeDefined();
     expect(hashCol!.notNull).toBe(true);
   });
@@ -49,25 +50,17 @@ describe("users table", () => {
 
 describe("userProfiles table", () => {
   it("has a userId column referencing users.id", () => {
-    const cols = userProfiles[Symbol.for("drizzle:Columns")] as Record<
-      string,
-      { name: string }
-    >;
+    const cols = drizzleCols(userProfiles);
     const userIdCol = Object.values(cols).find((c) => c.name === "user_id");
     expect(userIdCol).toBeDefined();
   });
 
   it("declares the table name as user_profiles", () => {
-    expect(
-      (userProfiles as unknown as Record<symbol, string>)[Symbol.for("drizzle:Name")]
-    ).toBe("user_profiles");
+    expect(drizzleName(userProfiles)).toBe("user_profiles");
   });
 
   it("has ftp, weight, goals, injuries, onboarding_complete columns", () => {
-    const cols = userProfiles[Symbol.for("drizzle:Columns")] as Record<
-      string,
-      { name: string; notNull: boolean }
-    >;
+    const cols = drizzleCols(userProfiles);
     const colNames = Object.values(cols).map((c) => c.name);
     expect(colNames).toContain("ftp");
     expect(colNames).toContain("weight");
@@ -77,10 +70,7 @@ describe("userProfiles table", () => {
   });
 
   it("onboarding_complete is notNull", () => {
-    const cols = userProfiles[Symbol.for("drizzle:Columns")] as Record<
-      string,
-      { name: string; notNull: boolean }
-    >;
+    const cols = drizzleCols(userProfiles);
     const col = Object.values(cols).find((c) => c.name === "onboarding_complete");
     expect(col).toBeDefined();
     expect(col!.notNull).toBe(true);
@@ -89,35 +79,36 @@ describe("userProfiles table", () => {
 
 describe("trainingSessions table", () => {
   it("has a userId column referencing users.id", () => {
-    const cols = trainingSessions[Symbol.for("drizzle:Columns")] as Record<
-      string,
-      { name: string }
-    >;
+    const cols = drizzleCols(trainingSessions);
     const userIdCol = Object.values(cols).find((c) => c.name === "user_id");
     expect(userIdCol).toBeDefined();
   });
 
   it("declares the table name as training_sessions", () => {
-    expect(
-      (trainingSessions as unknown as Record<symbol, string>)[Symbol.for("drizzle:Name")]
-    ).toBe("training_sessions");
+    expect(drizzleName(trainingSessions)).toBe("training_sessions");
   });
 });
 
-describe("stravaConnections table", () => {
+describe("activityUploads table", () => {
   it("has a userId column referencing users.id", () => {
-    const cols = stravaConnections[Symbol.for("drizzle:Columns")] as Record<
-      string,
-      { name: string }
-    >;
+    const cols = drizzleCols(activityUploads);
     const userIdCol = Object.values(cols).find((c) => c.name === "user_id");
     expect(userIdCol).toBeDefined();
   });
 
-  it("declares the table name as strava_connections", () => {
-    expect(
-      (stravaConnections as unknown as Record<symbol, string>)[Symbol.for("drizzle:Name")]
-    ).toBe("strava_connections");
+  it("declares the table name as activity_uploads", () => {
+    expect(drizzleName(activityUploads)).toBe("activity_uploads");
+  });
+
+  it("has fileName, startedAt, durationSec, avgPowerW, estimatedTss, matchedSessionId columns", () => {
+    const cols = drizzleCols(activityUploads);
+    const colNames = Object.values(cols).map((c) => c.name);
+    expect(colNames).toContain("file_name");
+    expect(colNames).toContain("started_at");
+    expect(colNames).toContain("duration_sec");
+    expect(colNames).toContain("avg_power_w");
+    expect(colNames).toContain("estimated_tss");
+    expect(colNames).toContain("matched_session_id");
   });
 });
 
@@ -126,9 +117,9 @@ describe("FK reference integrity", () => {
     // Each table must be a separate Drizzle table object
     expect(userProfiles).toBeDefined();
     expect(trainingSessions).toBeDefined();
-    expect(stravaConnections).toBeDefined();
+    expect(activityUploads).toBeDefined();
     expect(users).not.toBe(userProfiles);
     expect(users).not.toBe(trainingSessions);
-    expect(users).not.toBe(stravaConnections);
+    expect(users).not.toBe(activityUploads);
   });
 });

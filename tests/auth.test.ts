@@ -86,7 +86,7 @@ vi.mock("next/headers", () => ({
 vi.mock("next/navigation", () => ({
   redirect: vi.fn((url: string) => {
     const err = new Error(`REDIRECT:${url}`);
-    (err as Record<string, unknown>)["digest"] = `NEXT_REDIRECT:${url}`;
+    (err as unknown as Record<string, unknown>)["digest"] = `NEXT_REDIRECT:${url}`;
     throw err;
   }),
 }));
@@ -411,7 +411,7 @@ describe("POST /api/auth/logout (AUTH-03)", () => {
     const POST = await getLogoutHandler();
 
     try {
-      await POST(makeRequest({}));
+      await POST();
     } catch (err: unknown) {
       if (err instanceof Error && err.message.startsWith("REDIRECT:")) {
         expect(err.message).toBe("REDIRECT:/login");

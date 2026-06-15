@@ -77,23 +77,42 @@ export const trainingSessions = pgTable(
   (t) => [index("training_sessions_user_id_idx").on(t.userId)]
 );
 
-// ── strava_connections ────────────────────────────────────────────────────────
-// Phase 5 adds Strava token columns via migration:
-//   stravaAthleteId bigint, accessToken text (encrypted), refreshToken text (encrypted),
-//   expiresAt integer, etc.
-// userId is additionally .unique() — one Strava connection per user.
+// ── activity_uploads ──────────────────────────────────────────────────────────
+// Phase 5 D-04: Replaces the strava_connections skeleton table (dropped via migration 0003).
+//
+// Match ownership (D-05): activity_uploads.matchedSessionId owns the match link.
+// No back-reference column is added to training_sessions — avoids a second migration
+// and keeps the sessions table stable.
+//
+// SET NULL rationale (D-04, D-05): deleting a planned session must NOT cascade-delete
+// the ride record — the ride happened regardless. The match simply unlinks (null).
+//
+// IDOR guard: deleteActivityUpload and setUploadMatch use and() with both userId AND id
+// (single call — Pitfall 4). See queries.ts.
 
-export const stravaConnections = pgTable(
-  "strava_connections",
+export const activityUploads = pgTable(
+  "activity_uploads",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    // user_id FK — required on every non-users table (D-01)
-    // .unique() enforces one-connection-per-user at the DB level
+    // user_id FK — required on every non-users table (D-01); cascade on user deletion
     userId: uuid("user_id")
       .notNull()
-      .unique()
       .references(() => users.id, { onDelete: "cascade" }),
+    // Domain columns
+    fileName: text("file_name").notNull(),
+    startedAt: timestamp("started_at").notNull(),
+    durationSec: integer("duration_sec").notNull(),
+    // nullable — not all devices record power (Pitfall 3)
+    avgPowerW: integer("avg_power_w"),
+    // nullable — null when FTP is not set or avgPowerW is absent
+    estimatedTss: integer("estimated_tss"),
+    // FK to training_sessions — SET NULL so deleting a session unlinks but doesn't
+    // delete the ride record (D-04, D-05)
+    matchedSessionId: uuid("matched_session_id").references(
+      () => trainingSessions.id,
+      { onDelete: "set null" }
+    ),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
-  (t) => [index("strava_connections_user_id_idx").on(t.userId)]
+  (t) => [index("activity_uploads_user_id_idx").on(t.userId)]
 );
