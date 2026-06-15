@@ -114,7 +114,17 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. User can export the session as a .zwo file; power values are written as FTP fractions (e.g. 0.75) and all user-supplied text is XML-escaped
   4. Before the ride, user sees either estimated TSS (when FTP is set) or estimated duration and approximate intensity (Easy / Moderate / Hard) when FTP is absent
 
-**Plans**: TBD
+**Plans**: 3 plans
+
+**Wave 1**
+
+  - [ ] 04-01-PLAN.md — TSS/intensity utility (PROG-01) + shared formatDuration + Phase 4 COPY + generateSessionAction redirect (D-02)
+  - [ ] 04-03-PLAN.md — .zwo XML builder + XML escaping (TODAY-03) + export Route Handler (IDOR-guarded, D-11/D-13)
+
+**Wave 2** *(blocked on Wave 1)*
+
+  - [ ] 04-02-PLAN.md — /session/[id] RSC page + SessionDetail tap-to-advance riding view (TODAY-01/02) + dashboard "View session" link (D-03)
+
 **UI hint**: yes
 
 ### Phase 5: Strava Integration
@@ -160,6 +170,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 1. Foundation | 3/3 | Complete | 2026-06-14 |
 | 2. Profile & Onboarding | 3/3 | Complete   | 2026-06-14 |
 | 3. AI Session Generation | 3/3 | Complete   | 2026-06-14 |
-| 4. Today View & Export | 0/TBD | Not started | - |
+| 4. Today View & Export | 0/3 | In progress | - |
 | 5. Strava Integration | 0/TBD | Not started | - |
 | 6. PWA & Polish | 0/TBD | Not started | - |
