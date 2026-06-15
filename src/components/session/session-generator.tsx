@@ -31,6 +31,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { ErrorBanner } from "@/components/ui/error-banner";
 import { generateSessionAction } from "@/lib/actions/session";
 import type { GeneratedSession } from "@/lib/db/schemas/session";
+import { formatDuration } from "@/lib/training/format";
 
 /** The display-safe subset of a training session row for summary rendering. */
 type SessionSummary = {
@@ -54,17 +55,6 @@ const READINESS_OPTIONS: ReadinessOption[] = [
   { score: 2, label: "2 — Good" },
   { score: 3, label: "3 — Fresh" },
 ];
-
-/** Format total duration in seconds to human-readable "X min" or "Xh Ym". */
-function formatDuration(totalSec: number): string {
-  const totalMin = Math.round(totalSec / 60);
-  if (totalMin < 60) {
-    return `${totalMin} min`;
-  }
-  const hours = Math.floor(totalMin / 60);
-  const mins = totalMin % 60;
-  return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
-}
 
 interface SessionGeneratorProps {
   profile: {
