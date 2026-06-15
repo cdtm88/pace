@@ -96,11 +96,32 @@ export function SessionDetail({
           <Button
             variant="outline"
             className="flex-1"
-            onClick={() => {
-              const a = document.createElement("a");
-              a.href = `/api/session/${session.id}/export`;
-              a.download = "";
-              a.click();
+            onClick={async () => {
+              try {
+                const res = await fetch(`/api/session/${session.id}/export`);
+                if (!res.ok) throw new Error("Export failed");
+                const blob = await res.blob();
+                // Compute filename client-side from the title we already have —
+                // bypasses Safari's inconsistent Content-Disposition handling during
+                // page navigation.
+                const safeName =
+                  session.title
+                    .toLowerCase()
+                    .replace(/[^a-z0-9-_]/g, "-")
+                    .replace(/-+/g, "-")
+                    .replace(/^-+|-+$/g, "")
+                    .slice(0, 50) || "pace-session";
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = `${safeName}.zwo`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+              } catch {
+                alert(COPY.SESSION_EXPORT_ERROR);
+              }
             }}
           >
             {COPY.SESSION_PRE_RIDE_EXPORT_BTN}
