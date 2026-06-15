@@ -112,10 +112,11 @@ export async function generateSessionAction(
   }
 
   // ── Step 5: Zod validate ──────────────────────────────────────────────────
-  // Strip markdown fences defensively (Pitfall 3: Claude sometimes wraps JSON in ```json)
+  // Strip markdown fences defensively (Pitfall 3: Claude sometimes wraps JSON in ```json or plain ```)
   const stripped = rawText
-    .replace(/^```json?\n?/, '')
-    .replace(/\n?```$/, '')
+    .replace(/^```(?:json)?\s*\n?/, '')
+    .replace(/\n?```\s*$/, '')
+    .trim()
 
   let jsonParsed: unknown
   try {
