@@ -152,20 +152,30 @@ export async function generateSessionAction(
     profile?.ftp ?? null
   )
 
-  const [inserted] = await db
-    .insert(trainingSessions)
-    .values({
-      userId,
-      title: zodResult.data.title,
-      notes: zodResult.data.notes,
-      readinessScore,
-      // Cast required: Drizzle jsonb column type requires unknown cast (Pitfall 7)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      blocks: blocksWithWatts as unknown as any,
-      totalDurationSec: zodResult.data.totalDurationSec,
-      rawJson: rawText,   // stored server-only for debugging; never returned to client
-    })
-    .returning()
+  let inserted: typeof trainingSessions.$inferSelect | undefined
+  try {
+    ;[inserted] = await db
+      .insert(trainingSessions)
+      .values({
+        userId,
+        title: zodResult.data.title,
+        notes: zodResult.data.notes,
+        readinessScore,
+        // Cast required: Drizzle jsonb column type requires unknown cast (Pitfall 7)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        blocks: blocksWithWatts as unknown as any,
+        totalDurationSec: zodResult.data.totalDurationSec,
+        rawJson: rawText,   // stored server-only for debugging; never returned to client
+      })
+      .returning()
+  } catch {
+    return { error: 'Failed to save session. Please try again.' }
+  }
+
+  // WR-04: .returning() may resolve to [] on certain DB edge cases — inserted would be undefined
+  if (!inserted) {
+    return { error: 'Failed to save session. Please try again.' }
+  }
 
   // ── Step 8: Return ────────────────────────────────────────────────────────
   return { data: inserted }
