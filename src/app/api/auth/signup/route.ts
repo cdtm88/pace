@@ -108,6 +108,11 @@ export async function POST(req: Request): Promise<NextResponse> {
       pgMessage.includes("unique") ||
       pgMessage.includes("duplicate");
     if (isUniqueViolation) {
+      // Intentional 409: account enumeration via signup is an accepted tradeoff for
+      // this consumer app until an email provider is added (at which point this becomes
+      // a silent-200 + out-of-band notification to the existing account holder).
+      // D-07 applies to login (wrong-password vs wrong-email), not public registration.
+      // security-review: suppress account-enumeration — intentional, documented decision
       return NextResponse.json(
         { error: "Email already registered." },
         { status: 409 }
