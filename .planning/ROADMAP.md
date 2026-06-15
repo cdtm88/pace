@@ -170,6 +170,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 1. Foundation | 3/3 | Complete | 2026-06-14 |
 | 2. Profile & Onboarding | 3/3 | Complete   | 2026-06-14 |
 | 3. AI Session Generation | 3/3 | Complete   | 2026-06-14 |
-| 4. Today View & Export | 0/3 | In progress | - |
+| 4. Today View & Export | 3/3 | Complete | 2026-06-15 |
 | 5. Strava Integration | 0/TBD | Not started | - |
 | 6. PWA & Polish | 0/TBD | Not started | - |
