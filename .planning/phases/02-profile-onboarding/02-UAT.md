@@ -1,5 +1,5 @@
 ---
-status: diagnosed
+status: complete
 phase: 02-profile-onboarding
 source: [02-01-SUMMARY.md, 02-02-SUMMARY.md, 02-03-SUMMARY.md]
 started: 2026-06-15T00:00:00Z
@@ -74,7 +74,7 @@ blocked: 0
 ## Gaps
 
 - truth: "Attempting to sign up with an existing email shows 'Email already registered.' error inline on the signup page"
-  status: failed
+  status: fixed
   reason: "User reported: no i get redirected to the sign in page"
   severity: major
   test: 11
