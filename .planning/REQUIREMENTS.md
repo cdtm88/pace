@@ -31,13 +31,11 @@
 - [ ] **TODAY-02**: When FTP is set, each session block displays the power zone label (Z1–Z7 / Active Recovery / Endurance / Tempo / Threshold / VO2 Max / Anaerobic / Neuromuscular) alongside the watt target; when FTP is absent, RPE descriptors (Easy, Moderate, Hard, Very Hard) are shown instead
 - [ ] **TODAY-03**: User can export the current session as a Zwift-compatible `.zwo` file; when FTP is set, power values are written as FTP fractions (e.g. 0.75); when FTP is absent, absolute watt targets from the AI are written as fractions of a conservative reference value; user-supplied text fields are XML-escaped
 
-### Strava Integration
+### Activity Upload
 
-- [ ] **STRAVA-01**: User can connect their Strava account via OAuth2 using the official "Connect with Strava" button asset
-- [ ] **STRAVA-02**: User can disconnect their Strava account; tokens are deleted from the database on disconnect
-- [ ] **STRAVA-03**: After connecting (or on manual refresh), the last 30 Strava activities are fetched and auto-matched to logged sessions by date/duration proximity
-- [ ] **STRAVA-04**: Strava access tokens are refreshed before expiry; HTTP 429 responses from Strava are handled with exponential backoff and a user-visible "couldn't reach Strava — tap to retry" state
-- [ ] **STRAVA-05**: Strava tokens (`access_token`, `refresh_token`) are encrypted at rest using AES-GCM with a `TOKEN_ENC_KEY` environment variable; plaintext tokens are never written to the database
+- [ ] **UPLOAD-01**: User can upload a .fit file from any device (Garmin, Wahoo, Zwift) via the dashboard; the server parses start time, total duration, and average power from the binary file
+- [ ] **UPLOAD-02**: Each uploaded file is auto-matched to the closest planned training session by date and duration proximity (same UTC day, duration within ±20%); match result is confirmed to the user
+- [ ] **UPLOAD-03**: User can delete a previously uploaded activity; the database record and any session match are removed
 
 ### Progress
 
@@ -72,9 +70,9 @@
 - **PROG-V2-01**: Session history list with completed/skipped status
 - **PROG-V2-02**: CTL/ATL/TSB training form chart (requires weeks of data to be meaningful)
 
-### Strava
+### Activity Upload
 
-- **STRAVA-V2-01**: Strava webhook subscription (push on new activity) replaces polling; eliminates read traffic and removes 429 exposure
+- **UPLOAD-V2-01**: Strava API integration (OAuth connect, activity auto-fetch) replaces manual .fit upload once the Strava Developer subscription is in place
 
 ### Multi-User
 
@@ -93,7 +91,7 @@
 | HRV / wearable sync | High integration cost; subjective 0–3 readiness is strongly correlated with HRV |
 | CTL/ATL/TSB form chart | Requires weeks of data; weekly TSS bar chart is the right v1 scope |
 | Strava webhooks | Polling 30 activities is sufficient in v1; webhooks are the post-v1 upgrade |
-| Garmin / Wahoo / .fit export | Zwift .zwo only in v1 |
+| Strava OAuth integration | Requires paid Strava developer subscription; .fit upload covers the same loop for v1 |
 | Native mobile app | PWA is sufficient; App Store review is unnecessary friction |
 | Coach-athlete relationships | Single user type in v1; no role hierarchy |
 | Zwift API integration | File drop-in is the interface; no Zwift account auth required |
@@ -117,11 +115,9 @@
 | TODAY-02 | Phase 4 | Pending |
 | TODAY-03 | Phase 4 | Pending |
 | PROG-01 | Phase 4 | Pending |
-| STRAVA-01 | Phase 5 | Pending |
-| STRAVA-02 | Phase 5 | Pending |
-| STRAVA-03 | Phase 5 | Pending |
-| STRAVA-04 | Phase 5 | Pending |
-| STRAVA-05 | Phase 5 | Pending |
+| UPLOAD-01 | Phase 5 | Pending |
+| UPLOAD-02 | Phase 5 | Pending |
+| UPLOAD-03 | Phase 5 | Pending |
 | PROG-02 | Phase 5 | Pending |
 | PWA-01 | Phase 6 | Pending |
 | PWA-02 | Phase 6 | Pending |
@@ -131,8 +127,8 @@
 
 **Coverage:**
 
-- v1 requirements: 26 total
-- Mapped to phases: 26
+- v1 requirements: 24 total
+- Mapped to phases: 24
 - Unmapped: 0
 
 ---

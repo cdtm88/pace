@@ -17,7 +17,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 2: Profile & Onboarding** - Onboarding wizard, profile editing, FTP-optional data model, Coggan zone utility (completed 2026-06-14)
 - [x] **Phase 3: AI Session Generation** - Claude integration, Zod output schema, deterministic safety gate, per-user rate limit (completed 2026-06-14)
 - [x] **Phase 4: Today View & Export** - On-bike glanceable display, .zwo export, pre-ride TSS/intensity preview (completed 2026-06-15)
-- [ ] **Phase 5: Strava Integration** - OAuth connect/disconnect, AES-GCM token encryption, activity auto-match, 429 handling, progress chart
+- [ ] **Phase 5: Activity Upload** - .fit file upload, server-side FIT parsing, activity-to-session matching, weekly TSS chart
 - [ ] **Phase 6: PWA & Polish** - Serwist service worker, manifest, safe-area insets, touch targets, input attributes
 
 ## Phase Details
@@ -127,33 +127,19 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 **UI hint**: yes
 
-### Phase 5: Strava Integration
+### Phase 5: Activity Upload
 
-**Goal**: User can connect Strava and have completed rides automatically matched to their generated sessions; progress chart shows training load
+**Goal**: User can upload .fit files from any device to log completed rides against planned sessions; a weekly TSS chart shows training load over time
 **Depends on**: Phase 4
-**Requirements**: STRAVA-01, STRAVA-02, STRAVA-03, STRAVA-04, STRAVA-05, PROG-02
+**Requirements**: UPLOAD-01, UPLOAD-02, UPLOAD-03, PROG-02
 **Success Criteria** (what must be TRUE):
 
-  1. User connects Strava via the official "Connect with Strava" button; OAuth callback verifies the cryptographic state parameter and confirms activity:read scope before storing tokens
-  2. Strava access and refresh tokens are stored encrypted (AES-GCM) and are never written to the database in plaintext
-  3. After connecting (or on manual refresh), the last 30 Strava activities are fetched and auto-matched to logged sessions by date/duration proximity
-  4. When the Strava API returns HTTP 429, the app retries with exponential backoff and shows a "couldn't reach Strava — tap to retry" state to the user
-  5. User can disconnect Strava; tokens are deleted from the database on disconnect
-  6. User can view a weekly TSS bar chart (recharts, 6-week rolling window) showing training load over time
+  1. User can upload a .fit file from the dashboard; the server parses start time, total duration, and average power from the binary file
+  2. Each upload is auto-matched to the closest training session by same UTC day and duration within ±20%; the UI confirms the match or reports no match found
+  3. User can delete an uploaded activity; the record and session match are removed
+  4. User can view a weekly TSS bar chart (recharts, 6-week rolling window) showing training load from matched uploads
 
-**Plans**: 3 plans
-
-**Wave 1**
-
-  - [ ] 05-01-PLAN.md — Schema migrations (token columns + strava_activity_id) + AES-GCM crypto + activity matcher + IDOR-safe queries + SessionData CSRF field + env null-check + Strava SVG + Wave 0 test scaffolds
-
-**Wave 2** *(blocked on Wave 1)*
-
-  - [ ] 05-02-PLAN.md — Strava API client (proactive refresh + 429 backoff + fetch-and-match) + OAuth callback Route Handler (CSRF/scope/encrypt/upsert/match) + connect/disconnect/refresh Server Actions
-
-**Wave 3** *(blocked on Wave 2)*
-
-  - [ ] 05-03-PLAN.md — Install recharts + 17 COPY keys + buildWeeklyTSS + TSSChart + StravaSection (connect/refresh/inline-disconnect/429-retry) + dashboard wiring + browser-verify checkpoint
+**Plans**: TBD
 
 **UI hint**: yes
 

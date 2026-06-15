@@ -1,56 +1,59 @@
-# Phase 5: Strava Integration - Context
+# Phase 5: Activity Upload - Context
 
 **Gathered:** 2026-06-15
+**Updated:** 2026-06-15 (replanned from Strava OAuth → .fit file upload; Strava API requires paid subscription)
 **Status:** Ready for planning
 
 <domain>
 ## Phase Boundary
 
-Add Strava OAuth connect/disconnect, AES-GCM token encryption at rest, activity auto-matching to training sessions, 429 backoff handling, and a weekly TSS bar chart on the dashboard. The phase closes the generate → ride → log loop.
+Add .fit file upload, server-side FIT parsing, activity-to-session matching, and a weekly TSS bar chart to the dashboard. This closes the generate → ride → log loop without requiring a Strava API subscription.
 
-**In scope:** Strava OAuth flow (connect/disconnect), `stravaConnections` table migration (add token columns), AES-GCM encryption utility, activity fetch + auto-match (on connect + manual refresh), 429 retry with exponential backoff, dashboard Strava section (connect/disconnect UI), recharts TSS bar chart (6-week rolling), `strava_activity_id` column on `training_sessions`.
+**In scope:** .fit file upload Route Handler, `fit-file-parser` server-side parsing, `activity_uploads` table (replaces `strava_connections` skeleton), activity-to-session matching (same UTC day, ±20% duration), delete upload Server Action, recharts weekly TSS bar chart (6-week rolling), COPY keys for upload UI.
 
-**Out of scope:** Strava webhooks (v2), Garmin/Wahoo export, coach-athlete features, session history list, PWA polish (Phase 6).
+**Out of scope:** Strava OAuth (v2 once subscription is viable), Garmin Connect API, bulk import, upload history list page, PWA polish (Phase 6).
 
 </domain>
 
 <decisions>
 ## Implementation Decisions
 
-### OAuth Flow & Callback Architecture
+### Upload Architecture
 
-- **D-01: State parameter storage:** Store the CSRF state in iron-session under a `pending_strava_state` key. Reuses existing iron-session infrastructure — no extra dependency. Set on redirect to Strava, delete immediately after callback validation (prevent replay).
-- **D-02: Scope mismatch handling:** If the callback does not include `activity:read` in the granted scope, redirect to `/dashboard?strava_error=scope_denied` and display in the existing `ErrorBanner` component.
-- **D-03: Button placement:** "Connect with Strava" official button lives on the dashboard page, below the session generator in its own card/section. Shows either the connect button (disconnected state) or "Connected as {athleteName}" + disconnect button (connected state).
+- **D-01: Upload endpoint:** POST Route Handler at `src/app/api/fit/upload/route.ts`. Receives `multipart/form-data`, reads the file buffer, passes it to `fit-file-parser`, returns JSON with parsed fields and match result. IDOR-guarded via session userId.
+- **D-02: File size limit:** 10 MB max (typical .fit file is 100–500 KB; 10 MB covers edge cases without server abuse risk). Return 413 if exceeded.
+- **D-03: Client component:** `UploadFitButton` — `<input type="file" accept=".fit">` wrapped in a form, submits via `fetch()` to the Route Handler. Shows loading state during upload, success/error state after. Lives in `src/components/strava/upload-fit-button.tsx` (keep `strava/` directory for v2 migration ease).
 
-### Token Storage & Encryption
+### Database Schema
 
-- **D-04: Schema columns to add to stravaConnections:** `stravaAthleteId` (bigint), `accessToken` (text, AES-encrypted), `refreshToken` (text, AES-encrypted), `expiresAt` (integer, Unix epoch seconds), `scope` (text), `athleteName` (text, for dashboard display).
-- **D-05: Encryption approach:** `TOKEN_ENC_KEY` as a 32-byte base64 string (already in `src/env.ts`). Use Web Crypto API (`crypto.subtle`) directly — no external packages. AES-GCM, 128-bit IV.
-- **D-06: IV storage:** Prefix IV to ciphertext in the same column — `base64(iv + ciphertext)`. Single column per field, simple decode: first 16 bytes = IV, remainder = ciphertext.
-- **D-07: Token refresh timing:** Proactive — check `expiresAt - 600` (10-minute buffer) before any Strava API call. If within window, refresh first (atomically update DB), then proceed. On 401 from Strava, treat as "disconnected — prompt reconnect" (per STATE.md Pitfall note).
+- **D-04: Replace `stravaConnections`:** Drop `strava_connections` table via migration; create `activity_uploads` (id uuid PK, userId uuid FK→users, fileName text, startedAt timestamp, durationSec integer, avgPowerW integer nullable, estimatedTss integer nullable, matchedSessionId uuid nullable FK→training_sessions, createdAt timestamp). One migration file covers both the drop and the create.
+- **D-05: No back-reference on training_sessions:** The match is owned by `activity_uploads.matchedSessionId`. No column added to `training_sessions` — avoids a second migration and keeps the sessions table stable.
+- **D-06: One upload per session (soft constraint):** If a second upload matches the same session, allow it — overwrite the previous match. No unique constraint; last upload wins. Keeps the UI simple.
 
-### Activity Matching Algorithm
+### FIT Parsing
 
-- **D-08: Match criteria:** Same calendar date (UTC date string match) AND duration within ±20% of `training_sessions.totalDurationSec`. Fetches up to the last 30 Strava activities (bounded page — per CONSTRAINTS).
-- **D-09: Match storage:** Add `stravaActivityId` (bigint, nullable) column to `training_sessions` table via a new migration. Null = unmatched, non-null = matched to that Strava activity ID.
-- **D-10: Match trigger:** On initial Strava connect (after token storage) + manual "Refresh" button on dashboard. NOT on every page load — respects the 100 req/15min rate limit.
-- **D-11: UI for unmatched sessions:** None. Sessions display as-is; the Strava badge only appears when a match exists. No "No Strava match" indicator — keeps the UI clean for new users.
+- **D-07: Library:** `fit-file-parser` npm package. Pure JS, no native bindings, works in Vercel serverless. Parse in streaming callback mode: collect `record` messages for power/timestamp, read `session` message for total elapsed time and start time.
+- **D-08: Extracted fields:** `startedAt` (from session message `start_time`), `durationSec` (from session `total_elapsed_time`), `avgPowerW` (from session `avg_power`, nullable — not all devices record power). TSS estimated server-side using existing `estimateTSS()` when user FTP is set and avgPowerW is present; null otherwise.
+- **D-09: Parse errors:** If `fit-file-parser` throws or the file is not a valid FIT binary, return HTTP 400 with `{ error: "invalid_fit_file" }`. Surface as "File couldn't be read — make sure it's a .fit file" in the UI.
 
-### Dashboard UI & TSS Chart
+### Activity Matching
 
-- **D-12: Strava section on dashboard:** Separate card section below the session generator, above the edit-profile link and logout. Connected state: "Connected as {athleteName}" + "Refresh" button + "Disconnect" link. Disconnected state: official "Connect with Strava" button SVG asset (required by Strava brand guidelines).
-- **D-13: TSS chart:** Recharts `BarChart` with `ResponsiveContainer` (~300px height). 6-week rolling window — one bar per week, height = sum of TSS for matched sessions in that week. Placed below the Strava section on the dashboard.
-- **D-14: 429 / API error handling:** On `HTTP 429` from Strava, implement exponential backoff (3 retries: 1s, 2s, 4s). If still failing, show `ErrorBanner` with "Couldn't reach Strava — tap to retry" and a retry button that re-invokes the refresh Server Action.
-- **D-15: Empty chart state:** Show the chart frame with a text label "Complete sessions and connect Strava to see training load" when no weekly TSS data exists. Avoids hiding and showing the chart as data accumulates.
+- **D-10: Match algorithm:** Same as the discarded Strava plan — same UTC calendar date AND `durationSec` within ±20% of `training_sessions.totalDurationSec`. Query the user's sessions, find the best match, write `matchedSessionId`. Pure function in `src/lib/fit/match.ts` (same interface as prior `strava/match.ts`).
+- **D-11: No match case:** If no session matches, still store the upload with `matchedSessionId = null`. UI shows "No matching session found for this ride" below the upload confirmation.
+
+### Dashboard UI
+
+- **D-12: Upload section placement:** Below the session generator, above the logout link. Same position as the discarded Strava section. Card title "Log a Ride".
+- **D-13: Upload confirmation:** After successful upload, show inline in the card: "Logged — matched to [session title]" (when matched) or "Logged — no session matched for this date" (when unmatched). No page navigation.
+- **D-14: TSS chart:** Same spec as before — recharts `BarChart` + `ResponsiveContainer` (300px height), 6-week rolling, one bar per week, `#f97316` (orange-500) bars. Query `activity_uploads` where `matchedSessionId IS NOT NULL` and `userId = session.userId`, group by ISO week.
+- **D-15: Empty chart state:** Chart frame renders with centered label "Upload .fit files to see your training load" when no matched uploads exist.
 
 ### Claude's Discretion
 
-- Exact Tailwind classes for the Strava connection card and TSS chart container
-- COPY key names in `src/lib/copy.ts` for new user-visible strings (connect success, disconnect confirmation, chart empty state)
-- Exact bar color for the TSS chart (suggest orange/red, cycling brand conventions)
-- Whether to compute weekly TSS in a DB query (aggregate) or in-memory (6 weeks × ≤7 sessions is tiny — in-memory is fine)
-- Whether the "Refresh" button triggers a Server Action or a Route Handler POST
+- Exact Tailwind classes for the upload card and chart container
+- COPY key names for upload UI strings (success, no-match, error, delete confirm)
+- Whether delete is an inline confirm or a direct action
+- Exact file input styling
 
 </decisions>
 
@@ -58,60 +61,61 @@ Add Strava OAuth connect/disconnect, AES-GCM token encryption at rest, activity 
 ## Existing Code Insights
 
 ### Reusable Assets
-- `src/lib/session.ts` — `sessionOptions`, `SessionData` type; use for `getIronSession()` in all Strava route handlers
-- `src/lib/db/queries.ts` — `findStravaConnection()`, `findTrainingSession()`, `listTrainingSessions()` already scaffolded; extend with new helpers
-- `src/lib/db/schema.ts` — `stravaConnections` table skeleton exists (id, userId unique FK, createdAt); needs token columns via migration
-- `src/components/ui/error-banner.tsx` — existing error display component; use for 429 state
-- `src/components/ui/button.tsx` — existing Button; use for disconnect, refresh actions
-- `src/components/ui/card.tsx` — existing Card; use for Strava section container
+- `src/lib/session.ts` — `sessionOptions`, `SessionData`; use for auth in Route Handler
+- `src/lib/db/queries.ts` — `listTrainingSessions()` already scaffolded; extend with upload helpers
+- `src/lib/db/schema.ts` — `stravaConnections` skeleton needs replacement; `trainingSessions` stays unchanged
+- `src/lib/training/tss.ts` — `estimateTSS()` already implemented; use for TSS from avgPower + duration + FTP
+- `src/components/ui/error-banner.tsx` — use for parse/upload errors
+- `src/components/ui/button.tsx` — use for upload trigger and delete
+- `src/components/ui/card.tsx` — use for "Log a Ride" section container
 - `src/lib/copy.ts` — COPY pattern for all user-visible strings
-- `src/lib/training/tss.ts` — `estimateTSS()` already implemented; feeds the chart data
 
 ### Established Patterns
 - IDOR guard: `and(eq(table.userId, userId), eq(table.id, id))` — mandatory for resource fetches
-- iron-session in Route Handlers: `getIronSession<SessionData>(await cookies(), sessionOptions)` — `cookies()` is async (Next.js 16)
-- Server Actions for mutations; Route Handlers for OAuth callback and GET endpoints
+- Route Handlers for uploads and GET endpoints; Server Actions for mutations (delete)
+- `cookies()` is async in Next.js 16 — `await cookies()` everywhere
 - COPY pattern: all user-visible strings in `src/lib/copy.ts`
-- Error display via `ErrorBanner` component
 
 ### Integration Points
-- `src/app/(app)/dashboard/page.tsx` — add Strava section (D-12) and TSS chart (D-13)
-- `src/lib/db/schema.ts` — extend `stravaConnections` columns; add `stravaActivityId` to `trainingSessions`
-- `src/lib/db/queries.ts` — add strava helpers: `findStravaConnectionByUserId`, `upsertStravaConnection`, `deleteStravaConnection`, `updateSessionStravaMatch`
-- `src/env.ts` — `STRAVA_CLIENT_ID`, `STRAVA_CLIENT_SECRET`, `TOKEN_ENC_KEY`, `APP_BASE_URL` already exported
+- `src/app/(app)/dashboard/page.tsx` — add upload section and TSS chart
+- `src/lib/db/schema.ts` — replace `stravaConnections` with `activityUploads`
+- `src/lib/db/queries.ts` — add `insertActivityUpload`, `findActivityUploadsByUserId`, `deleteActivityUpload`, `matchSessionToUpload`
 - New files needed:
-  - `src/lib/strava/crypto.ts` — AES-GCM encrypt/decrypt via Web Crypto API
-  - `src/lib/strava/client.ts` — Strava API fetch helpers (activities, token refresh)
-  - `src/lib/strava/match.ts` — activity matching algorithm
-  - `src/app/api/strava/callback/route.ts` — OAuth callback handler
-  - `src/lib/actions/strava.ts` — Server Actions: connect (initiate OAuth redirect), disconnect, refresh
+  - `src/lib/fit/parse.ts` — FIT file parsing wrapper around `fit-file-parser`
+  - `src/lib/fit/match.ts` — activity-to-session matching pure function
+  - `src/app/api/fit/upload/route.ts` — POST Route Handler (multipart, IDOR-guarded)
+  - `src/lib/actions/fit.ts` — Server Action: deleteUpload
+  - `src/lib/strava/tss-chart-data.ts` → `src/lib/fit/tss-chart-data.ts` — buildWeeklyTSS
+  - `src/components/fit/upload-fit-button.tsx` — Client Component for file input
+  - `src/components/fit/tss-chart.tsx` — recharts TSS bar chart Client Component
 
 </code_context>
 
 <specifics>
 ## Specific Ideas
 
-- Official "Connect with Strava" button: use the SVG from `https://developers.strava.com/guidelines/` (download locally to `public/` — do not hotlink)
-- OAuth state param: `crypto.randomUUID()` stored as `session.pending_strava_state` before redirect to Strava
-- Strava OAuth callback URL: `${APP_BASE_URL}/api/strava/callback`
-- Token exchange endpoint: `POST https://www.strava.com/oauth/token`
-- Activities endpoint: `GET https://www.strava.com/api/v3/athlete/activities?per_page=30`
-- TSS chart bar color: suggest `#f97316` (orange-500 in Tailwind) — cycling brand association
-- `athleteName` display: `athlete.firstname + " " + athlete.lastname` from Strava token exchange response
-- TSS chart X-axis: week labels like "Jun 9", "Jun 16", etc.
+- `fit-file-parser` usage: `new FitParser({ force: true, speedUnit: 'km/h', lengthUnit: 'm', temperatureUnit: 'celsius', elapsedRecordField: true, mode: 'cascade' })` — use `force: true` to tolerate minor file corruption
+- Session message fields: `start_time` (Date), `total_elapsed_time` (seconds), `avg_power` (watts, optional)
+- TSS formula: `(durationSec × avgPowerW × IF) / (FTP × 3600) × 100` where `IF = avgPowerW / FTP`
+- Chart X-axis: week labels like "Jun 9", "Jun 16"
+- Bar color: `#f97316` (Tailwind orange-500) — consistent with original Strava chart design
+- Weekly TSS computed in-memory (6 weeks × ≤7 sessions — tiny)
+- Delete action: `deleteActivityUploadAction(uploadId)` → Server Action with IDOR guard
 
 </specifics>
 
 <deferred>
 ## Deferred Ideas
 
-- Strava webhooks (real-time push on new activity) — v2 requirement, out of scope for v1
-- `STRAVA-V2-01`: webhook subscription replaces polling (noted in REQUIREMENTS.md)
-- Avatar/profile photo from Strava — `athlete.profile` URL available but adds complexity; skipped in v1
+- Strava OAuth integration — deferred to v2 once paid subscription is viable (`UPLOAD-V2-01`)
+- Upload history list page — v2; dashboard confirmation is sufficient for v1
+- Bulk .fit import — v2
+- Garmin Connect API direct sync — v2
 
 </deferred>
 
 ---
 
-*Phase: 5-strava-integration*
+*Phase: 5-activity-upload*
 *Context gathered: 2026-06-15*
+*Replanned: 2026-06-15 — switched from Strava OAuth to .fit upload*
