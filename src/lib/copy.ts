@@ -96,4 +96,16 @@ export const COPY = {
   FIELD_UNIT_WEIGHT: "kg",
   FIELD_OPTIONAL_LABEL: "Optional",
   STEP_COUNTER: "Step {n} of 3",
+
+  // ── Phase 4: Session detail ──────────────────────────────────────────────────
+
+  SESSION_PRE_RIDE_EXPORT_BTN: "Export .zwo",
+  SESSION_PRE_RIDE_START_BTN: "Start session",
+  SESSION_COMPLETE_HEADING: "Session complete",
+  SESSION_COMPLETE_BACK: "Back to dashboard",
+  SESSION_BADGE_TSS: "~{tss} TSS · {duration}",
+  SESSION_BADGE_INTENSITY: "{intensity} · {duration}",
+  SESSION_DASHBOARD_VIEW_LINK: "View session",
+  SESSION_BLOCK_COUNTER: "{current} / {total}",
+  SESSION_EXPORT_ERROR: "Export failed. Please try again.",
 } as const;

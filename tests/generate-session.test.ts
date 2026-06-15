@@ -60,6 +60,16 @@ vi.mock("next/headers", () => ({
   cookies: vi.fn().mockResolvedValue({}),
 }));
 
+// ── Mock: next/navigation (redirect) ─────────────────────────────────────────
+
+const { mockRedirect } = vi.hoisted(() => ({
+  mockRedirect: vi.fn(),
+}));
+
+vi.mock("next/navigation", () => ({
+  redirect: mockRedirect,
+}));
+
 // ── Mock: iron-session ────────────────────────────────────────────────────────
 
 vi.mock("iron-session", () => ({
@@ -268,22 +278,19 @@ describe("generateSessionAction", () => {
     expect(mockMessagesCreate).not.toHaveBeenCalled();
   });
 
-  it("calls validateSessionSafety + DB insert and returns data for a valid SDK response", async () => {
+  it("calls validateSessionSafety + DB insert and redirects to /session/{id} on success (D-02)", async () => {
     mockAuthenticatedSession();
     mockRateLimitAllow();
     mockProfileWithFtp();
     mockSdkResponse(validSessionJson);
 
-    const result = await generateSessionAction(2);
+    await generateSessionAction(2);
 
-    // Should not be an error
-    expect(result.error).toBeUndefined();
-    // Should have returned data from DB
-    expect(result.data).toBeDefined();
-    expect(result.data).toEqual(mockInsertedSession);
     // DB insert should have been called
     expect(mockInsert).toHaveBeenCalled();
     expect(mockValues).toHaveBeenCalled();
+    // On success: redirect to /session/{id} instead of returning data (D-02)
+    expect(mockRedirect).toHaveBeenCalledWith(`/session/${mockInsertedSession.id}`);
   });
 
   it("returns generic error and does NOT insert when SDK returns Zod-invalid JSON (powerFraction 2.5)", async () => {

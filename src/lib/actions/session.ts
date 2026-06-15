@@ -34,6 +34,7 @@
  */
 
 import { cookies } from 'next/headers'
+import { redirect } from 'next/navigation'
 import { getIronSession } from 'iron-session'
 import Anthropic from '@anthropic-ai/sdk'
 
@@ -50,7 +51,7 @@ import { ANTHROPIC_API_KEY } from '@/env'
 
 export async function generateSessionAction(
   readinessScore: number
-): Promise<{ data?: typeof trainingSessions.$inferSelect; error?: string }> {
+): Promise<{ error: string } | undefined> {
 
   // ── Step 1: Auth ──────────────────────────────────────────────────────────
   const ironSession = await getIronSession<SessionData>(await cookies(), sessionOptions)
@@ -183,6 +184,7 @@ export async function generateSessionAction(
     return { error: 'Failed to save session. Please try again.' }
   }
 
-  // ── Step 8: Return ────────────────────────────────────────────────────────
-  return { data: inserted }
+  // ── Step 8: Success: redirect to /session/{id} (D-02); error paths return { error }
+  // redirect() throws NEXT_REDIRECT internally — must be OUTSIDE try/catch (Pitfall 3)
+  redirect(`/session/${inserted.id}`)
 }
