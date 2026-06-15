@@ -1,0 +1,635 @@
+<!doctype html>
+<html lang="en" data-vibe="rough" data-notes="on">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Pace — Wireframes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600;700&family=Patrick+Hand&family=Architects+Daughter&family=Gaegu:wght@400;700&display=swap" rel="stylesheet" />
+<style>
+:root{
+  --ink:#211f1b;
+  --paper:#efe9dc;
+  --paper2:#e7e0d0;
+  --screen:#fdfcf8;
+  --line:#cbc6b8;
+  --muted:#8c877b;
+  --accent:#d4ff3f;
+  --accent-ink:#211f1b;
+  --rough-filter:url(#rough);
+  --ui-font:'Patrick Hand','Comic Sans MS',cursive;
+  --display-font:'Caveat',cursive;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{
+  background:var(--paper);
+  background-image:
+    linear-gradient(var(--paper2) 1px, transparent 1px),
+    linear-gradient(90deg, var(--paper2) 1px, transparent 1px);
+  background-size:26px 26px;
+  color:var(--ink);
+  font-family:var(--ui-font);
+  -webkit-font-smoothing:antialiased;
+  padding:0 0 120px;
+}
+/* hand-drawn rough border applied via pseudo-element so text stays crisp */
+.sk{position:relative}
+.sk::before{
+  content:"";position:absolute;inset:0;
+  border:2.5px solid var(--ink);
+  border-radius:var(--r,14px);
+  filter:var(--rough-filter);
+  pointer-events:none;
+}
+.sk.thin::before{border-width:1.8px}
+.dashed::before{border-style:dashed}
+
+/* ---------- board scaffold ---------- */
+.board{max-width:1500px;margin:0 auto;padding:40px 32px}
+.board-head{margin:8px 0 30px;max-width:880px}
+.kicker{font-family:var(--ui-font);letter-spacing:.16em;text-transform:uppercase;font-size:13px;color:var(--muted)}
+.board-head h1{font-family:var(--display-font);font-weight:700;font-size:74px;line-height:.9;margin:6px 0 10px}
+.board-head p{font-size:20px;line-height:1.45;margin:0 0 18px;max-width:680px}
+.legend{display:flex;flex-wrap:wrap;gap:8px 24px;align-items:center;font-size:16px;color:#56524a;line-height:1.25}
+.legend b{font-weight:400}
+.lg{display:inline-flex;align-items:center;gap:8px}
+.sw{width:20px;height:14px;border:2px solid var(--ink);border-radius:3px;display:inline-block}
+.sw.acc{background:var(--accent)}
+.sw.dash{border-style:dashed;background:transparent}
+.tip{display:flex;gap:8px;align-items:center;margin-top:26px;line-height:1.3;font-family:var(--display-font);font-size:22px;color:#56524a}
+.tip .tag{font-family:var(--ui-font);font-size:13px;background:var(--ink);color:var(--paper);padding:3px 9px;border-radius:20px;letter-spacing:.04em}
+
+.grp{margin:46px 0 0;padding-top:30px;border-top:2.5px dashed var(--line)}
+.grp-head{margin:0 0 22px;display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 16px}
+.grp-head h2{font-family:var(--display-font);font-weight:700;font-size:40px;margin:0;line-height:1}
+.grp-head .num{font-family:var(--display-font);font-size:40px;color:var(--muted)}
+.grp-head p{margin:0;font-size:18px;color:#56524a;max-width:560px;flex:1 1 320px}
+.row{display:flex;flex-wrap:wrap;gap:34px 30px;align-items:flex-start}
+.cell{margin:0;display:flex;flex-direction:column;gap:12px;width:300px}
+.cell.wide{width:300px}
+figcaption.note{font-family:var(--display-font);font-size:20px;line-height:1.2;color:#403d36}
+figcaption.note b{font-weight:700}
+figcaption.note .lbl{display:inline-block;background:var(--accent);color:var(--accent-ink);padding:1px 8px;border-radius:5px;font-size:18px;margin-bottom:3px}
+html[data-notes="off"] figcaption.note{display:none}
+
+/* ---------- phone ---------- */
+.phone{width:300px;background:var(--screen);border-radius:36px;padding:11px}
+.phone::before{border-radius:36px}
+.screen{position:relative;background:var(--screen);border-radius:26px;overflow:hidden;min-height:600px;display:flex;flex-direction:column}
+.statusbar{display:flex;align-items:center;justify-content:space-between;padding:9px 20px 4px;font-size:13px;color:var(--ink)}
+.statusbar .notch{width:62px;height:15px;background:var(--ink);border-radius:0 0 12px 12px;margin-top:-4px}
+.statusbar .batt{letter-spacing:1px}
+.scr{flex:1;display:flex;flex-direction:column;gap:13px;padding:14px 18px 18px}
+.scr.tight{gap:9px}
+
+/* dark ride screen */
+.phone.dark{background:#17150f}
+.phone.dark .screen{background:#17150f;color:#f4f1e6}
+.phone.dark .statusbar{color:#f4f1e6}
+.phone.dark .statusbar .notch{background:#000}
+.phone.dark .sk::before{border-color:#f4f1e6}
+.phone.dark .muted{color:#a7a293}
+
+/* ---------- primitives ---------- */
+.appbar{display:flex;align-items:center;justify-content:space-between}
+.appbar .brand{font-family:var(--display-font);font-size:30px;font-weight:700;line-height:1}
+.avatar{width:34px;height:34px;border-radius:50%}
+.h1{font-size:25px;font-weight:400;line-height:1.05;margin:0}
+.h2{font-size:20px;margin:0;line-height:1.1}
+.sub{font-size:16px;color:var(--muted);line-height:1.3;margin:0}
+.muted{color:var(--muted)}
+.tiny{font-size:13px}
+.center{text-align:center}
+.spread{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.col{display:flex;flex-direction:column}
+.stack{display:flex;flex-direction:column;gap:9px}
+.rowflex{display:flex;gap:9px}
+.wrapchips{display:flex;flex-wrap:wrap;gap:8px}
+.grow{flex:1}
+.push{margin-top:auto}
+
+.box{padding:13px 14px;border-radius:14px}
+.box .sk-r{--r:14px}
+.field{padding:12px 13px;border-radius:11px;--r:11px;font-size:16px;color:var(--muted);display:flex;justify-content:space-between;align-items:center}
+.field .val{color:var(--ink)}
+.area{min-height:78px;align-items:flex-start;padding:12px 13px}
+.chip{padding:8px 13px;border-radius:22px;--r:22px;font-size:16px;line-height:1;flex:0 0 auto}
+.chip.on{background:var(--accent);color:var(--accent-ink)}
+.btn{padding:13px 14px;border-radius:13px;--r:13px;font-size:18px;text-align:center;line-height:1;min-height:48px;display:flex;align-items:center;justify-content:center;gap:8px}
+.btn.pri{background:var(--accent);color:var(--accent-ink)}
+.btn.dk{background:var(--ink);color:var(--paper)}
+.btn.dk::before{border-color:var(--ink)}
+.btn.sm{min-height:0;padding:9px 12px;font-size:16px;border-radius:11px;--r:11px}
+.btn.strava{background:#fc4c02;color:#fff}
+.btn.strava::before{border-color:#fc4c02}
+
+.ph{height:10px;background:var(--line);border-radius:6px}
+.ph.t{height:8px}
+.w90{width:90%}.w80{width:80%}.w70{width:70%}.w60{width:60%}.w50{width:50%}.w40{width:40%}.w30{width:30%}
+
+.dots{display:flex;gap:7px;align-items:center}
+.dot{width:9px;height:9px;border-radius:50%;border:2px solid var(--ink)}
+.dot.on{background:var(--ink)}
+.dot.acc{background:var(--accent);border-color:var(--accent)}
+.seg{height:7px;border-radius:5px;background:var(--line);flex:1}
+.seg.on{background:var(--ink)}
+.seg.acc{background:var(--accent)}
+
+.bar{display:flex;align-items:flex-end;gap:5px;height:84px}
+.bar i{flex:1;background:var(--line);border-radius:4px 4px 0 0;display:block}
+.bar i.acc{background:var(--accent)}
+.bar i.ink{background:var(--ink)}
+
+/* interval profile */
+.prof{display:flex;align-items:flex-end;gap:3px;height:64px}
+.prof i{flex:1;background:var(--line);border-radius:3px 3px 0 0}
+.prof i.acc{background:var(--accent)}
+.prof i.cur{background:var(--ink);position:relative}
+
+.huge{font-family:var(--display-font);font-weight:700;line-height:.82;letter-spacing:-.01em}
+.unit{font-family:var(--ui-font)}
+
+.pill{display:inline-block;padding:4px 11px;border-radius:20px;--r:20px;font-size:15px;vertical-align:middle;line-height:1.3}
+.pill.acc{background:var(--accent);color:var(--accent-ink)}
+
+.iconc{width:30px;height:30px;border-radius:8px;--r:8px;display:flex;align-items:center;justify-content:center;font-size:15px}
+
+/* readiness cards */
+.ready{display:flex;flex-direction:column;gap:10px}
+.rcard{padding:13px 14px;border-radius:13px;--r:13px;display:flex;align-items:center;gap:13px}
+.rcard .n{font-family:var(--display-font);font-size:34px;line-height:1;width:34px;text-align:center}
+.rcard.on{background:var(--accent);color:var(--accent-ink)}
+.rcard .col{flex:1}
+
+.banner{padding:10px 12px;border-radius:11px;--r:11px;font-size:15px;display:flex;gap:9px;align-items:flex-start}
+.banner.dash::before{border-style:dashed}
+
+.zonefield{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:24px 18px;text-align:center}
+
+.retry{font-size:14px}
+.pill,.chip,.btn,.field{white-space:nowrap}
+.dots>span{white-space:nowrap}
+.nw{white-space:nowrap}
+a{color:inherit}
+</style>
+</head>
+<body>
+<!-- roughen filter for hand-drawn borders -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <filter id="rough">
+    <feTurbulence type="fractalNoise" baseFrequency="0.013" numOctaves="2" seed="7" result="noise"/>
+    <feDisplacementMap in="SourceGraphic" in2="noise" scale="2.6" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+</svg>
+
+<div class="board">
+  <header class="board-head">
+    <div class="kicker">Pace · low-fi wireframes</div>
+    <h1>generate → ride → log</h1>
+    <p>An exploration of the screens behind Pace — the AI cycling coach that builds a session from your readiness, shows it glanceably on the bike, and logs it back from Strava. Structure &amp; flow only; visuals come later.</p>
+    <div class="legend">
+      <span class="lg"><span class="sw acc"></span><b>accent = live / active / current effort</b></span>
+      <span class="lg"><span class="sw dash"></span><b>dashed = optional or empty state</b></span>
+      <span class="lg"><b>✎ captions = design rationale</b></span>
+    </div>
+    <div class="tip"><span class="tag">Tweaks</span> swap the accent, sketch level, hand-font &amp; toggle notes →</div>
+  </header>
+
+  <!-- ====================== 1 · ONBOARDING ====================== -->
+  <section class="grp">
+    <div class="grp-head"><span class="num">01</span><h2>Onboarding wizard</h2><p>Three quick steps. FTP &amp; weight are optional — the app never blocks you for not knowing your numbers.</p></div>
+    <div class="row">
+
+      <!-- step 1 -->
+      <figure class="cell">
+        <div class="phone sk"><div class="screen">
+          <div class="statusbar"><span>9:41</span><span class="notch"></span><span class="batt">▮▮▮</span></div>
+          <div class="scr">
+            <div class="dots"><span class="dot on"></span><span class="dot"></span><span class="dot"></span><span class="muted tiny" style="margin-left:6px">Step 1 of 3</span></div>
+            <h2 class="h1">What are you<br/>training for?</h2>
+            <p class="sub">Pick all that apply.</p>
+            <div class="wrapchips">
+              <span class="chip sk on">Build endurance</span>
+              <span class="chip sk">Get faster</span>
+              <span class="chip sk">Event prep</span>
+              <span class="chip sk on">Lose weight</span>
+              <span class="chip sk">Just ride</span>
+              <span class="chip sk">Climb better</span>
+            </div>
+            <div class="push stack">
+              <div class="btn pri sk">Continue</div>
+            </div>
+          </div>
+        </div></div>
+        <figcaption class="note"><span class="lbl">Goals</span><br/>Chips, not a form. Multi-select keeps the prompt context rich for the AI.</figcaption>
+      </figure>
+
+      <!-- step 2 -->
+      <figure class="cell">
+        <div class="phone sk"><div class="screen">
+          <div class="statusbar"><span>9:41</span><span class="notch"></span><span class="batt">▮▮▮</span></div>
+          <div class="scr">
+            <div class="dots"><span class="dot on"></span><span class="dot on"></span><span class="dot"></span><span class="muted tiny" style="margin-left:6px">Step 2 of 3</span></div>
+            <h2 class="h1">Your numbers<br/><span class="muted" style="font-size:18px">— optional</span></h2>
+            <div class="field sk"><span>FTP (watts)</span><span class="val">248</span></div>
+            <div class="field sk dashed"><span>Weight (kg)</span><span class="muted">— skip</span></div>
+            <div class="banner sk dash"><span>💡</span><span>No FTP? No problem. We'll coach by <b>feel (RPE)</b> and you can add it after a test.</span></div>
+            <div class="push stack">
+              <div class="btn pri sk">Continue</div>
+              <div class="btn sk">Skip for now</div>
+            </div>
+          </div>
+        </div></div>
+        <figcaption class="note"><span class="lbl">FTP-optional</span><br/>The whole data model bends around this: a clear <b>skip</b> path, never a wall.</figcaption>
+      </figure>
+
+      <!-- step 3 -->
+      <figure class="cell">
+        <div class="phone sk"><div class="screen">
+          <div class="statusbar"><span>9:41</span><span class="notch"></span><span class="batt">▮▮▮</span></div>
+          <div class="scr">
+            <div class="dots"><span class="dot on"></span><span class="dot on"></span><span class="dot on"></span><span class="muted tiny" style="margin-left:6px">Step 3 of 3</span></div>
+            <h2 class="h1">Anything we<br/>should avoid?</h2>
+            <p class="sub">Injuries, niggles, hard limits. The coach will work around them.</p>
+            <div class="field sk area col"><span class="muted">e.g. dodgy left knee — no</span><span class="muted">standing sprints…</span></div>
+            <div class="push stack">
+              <div class="btn pri sk">Finish &amp; see today →</div>
+            </div>
+          </div>
+        </div></div>
+        <figcaption class="note"><span class="lbl">Injury notes</span><br/>Free text feeds the safety context. Lands the user straight on the dashboard.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ====================== 2 · DASHBOARD ====================== -->
+  <section class="grp">
+    <div class="grp-head"><span class="num">02</span><h2>Dashboard / home</h2><p>The hub. Shown in both states the app supports — with FTP (power zones) and without (feel-based RPE).</p></div>
+    <div class="row">
+
+      <!-- FTP set -->
+      <figure class="cell">
+        <div class="phone sk"><div class="screen">
+          <div class="statusbar"><span>9:41</span><span class="notch"></span><span class="batt">▮▮▮</span></div>
+          <div class="scr">
+            <div class="appbar"><span class="brand">Pace</span><span class="avatar sk"></span></div>
+            <div class="box sk spread">
+              <div class="col"><span class="tiny muted">FTP</span><span class="nw" style="font-size:22px">248 W</span></div>
+              <span class="pill acc sk">Zones Z1–Z7 ready</span>
+            </div>
+            <p class="sub" style="margin-top:2px">Tuesday · feeling fresh?</p>
+            <div class="btn pri sk" style="min-height:62px;font-size:21px">Generate today's session</div>
+            <div class="box sk stack">
+              <span class="tiny muted">LAST RIDE · Sun</span>
+              <div class="spread"><span class="h2">Endurance 75′</span><span class="pill sk">68 TSS</span></div>
+              <div class="prof"><i style="height:30%"></i><i style="height:34%"></i><i style="height:32%"></i><i style="height:38%"></i><i style="height:33%"></i><i style="height:36%"></i><i style="height:31%"></i></div>
+            </div>
+            <div class="push spread tiny muted"><span>🏠 Today</span><span>📈 Progress</span><span>👤 Profile</span></div>
+          </div>
+        </div></div>
+        <figcaption class="note"><span class="lbl">FTP set</span><br/>Power-aware: TSS, watt zones, structured history. One fat primary action.</figcaption>
+      </figure>
+
+      <!-- no FTP -->
+      <figure class="cell">
+        <div class="phone sk"><div class="screen">
+          <div class="statusbar"><span>9:41</span><span class="notch"></span><span class="batt">▮▮▮</span></div>
+          <div class="scr">
+            <div class="appbar"><span class="brand">Pace</span><span class="avatar sk"></span></div>
+            <div class="banner sk dash"><span>🎯</span><span>Coaching by <b>feel (RPE)</b>. <u>Add FTP</u> anytime for watt targets &amp; TSS.</span></div>
+            <p class="sub" style="margin-top:2px">Tuesday · feeling fresh?</p>
+            <div class="btn pri sk" style="min-height:62px;font-size:21px">Generate today's session</div>
+            <div class="box sk stack">
+              <span class="tiny muted">LAST RIDE · Sun</span>
+              <div class="spread"><span class="h2">Easy spin 60′</span><span class="pill sk">Easy</span></div>
+              <div class="prof"><i style="height:30%"></i><i style="height:30%"></i><i style="height:34%"></i><i style="height:30%"></i><i style="height:32%"></i><i style="height:30%"></i><i style="height:30%"></i></div>
+            </div>
+            <div class="push spread tiny muted"><span>🏠 Today</span><span>📈 Progress</span><span>👤 Profile</span></div>
+          </div>
+        </div></div>
+        <figcaption class="note"><span class="lbl">No FTP</span><br/>Same layout, no degraded UI: effort words replace watts, a gentle nudge to add FTP.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ====================== 3 · READINESS → GENERATE ====================== -->
+  <section class="grp">
+    <div class="grp-head"><span class="num">03</span><h2>Readiness → generate</h2><p>A single 0–3 tap sets the tone of today's AI session. Plus the loading and safe-fallback states.</p></div>
+    <div class="row">
+
+      <!-- readiness selector -->
+      <figure class="cell">
+        <div class="phone sk"><div class="screen">
+          <div class="statusbar"><span>9:41</span><span class="notch"></span><span class="batt">▮▮▮</span></div>
+          <div class="scr tight">
+            <div class="spread"><span class="tiny muted">← Back</span><span class="tiny muted">Tue 14 Jun</span></div>
+            <h2 class="h1">How ready do<br/>you feel today?</h2>
+            <div class="ready">
+              <div class="rcard sk"><span class="n">0</span><div class="col"><span class="h2">Wrecked</span><span class="tiny muted">recovery only</span></div></div>
+              <div class="rcard sk"><span class="n">1</span><div class="col"><span class="h2">Tired</span><span class="tiny muted">keep it light</span></div></div>
+              <div class="rcard sk on"><span class="n">2</span><div class="col"><span class="h2">Good</span><span class="tiny muted">normal session</span></div></div>
+              <div class="rcard sk"><span class="n">3</span><div class="col"><span class="h2">Fired up</span><span class="tiny muted">bring the pain</span></div></div>
+            </div>
+            <div class="push btn pri sk" style="min-height:56px;font-size:20px">⚡ Generate session</div>
+          </div>
+        </div></div>
+        <figcaption class="note"><span class="lbl">0–3 selector</span><br/>One thumb, four big targets. The number + label both feed the prompt.</figcaption>
+      </figure>
+
+      <!-- generating -->
+      <figure class="cell">
+        <div class="phone sk"><div class="screen">
+          <div class="statusbar"><span>9:41</span><span class="notch"></span><span class="batt">▮▮▮</span></div>
+          <div class="scr" style="align-items:center;justify-content:center;text-align:center">
+            <div class="iconc sk" style="width:60px;height:60px;font-size:26px;--r:16px">⚙️</div>
+            <h2 class="h1" style="margin-top:6px">Building your<br/>session…</h2>
+            <p class="sub">Reading your goals, FTP &amp; today's “Good”.</p>
+            <div class="stack" style="width:100%;margin-top:6px">
+              <div class="ph w80"></div><div class="ph w90"></div><div class="ph w60"></div>
+            </div>
+            <p class="tiny muted push">3 / 5 generations left today</p>
+          </div>
+        </div></div>
+        <figcaption class="note"><span class="lbl">Generating</span><br/>Per-user daily limit is surfaced honestly, even mid-spin.</figcaption>
+      </figure>
+
+      <!-- fallback / limit -->
+      <figure class="cell">
+        <div class="phone sk"><div class="screen">
+          <div class="statusbar"><span>9:41</span><span class="notch"></span><span class="batt">▮▮▮</span></div>
+          <div class="scr" style="justify-content:center;text-align:center;gap:14px">
+            <div class="iconc sk dashed" style="width:58px;height:58px;font-size:26px;--r:16px;margin:0 auto">🛟</div>
+            <h2 class="h1">That one didn't<br/>pass the check</h2>
+            <p class="sub">Our safety gate caught an odd session before saving it. Nothing was logged.</p>
+            <div class="btn pri sk">Try again</div>
+            <div class="banner sk dash" style="text-align:left;margin-top:6px"><span>🔒</span><span><b>Limit reached?</b> You'll see “0 left today — back tomorrow” instead of a failed call.</span></div>
+          </div>
+        </div></div>
+        <figcaption class="note"><span class="lbl">Safe fallback</span><br/>Schema + deterministic gate failures degrade to a friendly retry, never a crash.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ====================== 4 · TODAY VIEW (HERO) ====================== -->
+  <section class="grp">
+    <div class="grp-head"><span class="num">04</span><h2>Today view — on the bike</h2><p>The hero. Read at arm's length, mid-effort, sweaty. Four directions for showing <b>what to do right now</b>. Big watt target + zone/RPE are the constants; they differ on how much structure &amp; context they surface.</p></div>
+    <div class="row">
+
+      <!-- V1 Big Number -->
+      <figure class="cell">
+        <div class="phone sk dark"><div class="screen">
+          <div class="statusbar"><span>9:41</span><span class="notch"></span><span class="batt">▮▮▮</span></div>
+          <div class="rowflex" style="margin:8px 16px 0"><span class="seg on"></span><span class="seg on"></span><span class="seg acc"></span><span class="seg"></span><span class="seg"></span></div>
+          <div class="scr" style="justify-content:center;text-align:center;gap:6px">
+            <span class="pill acc sk" style="align-self:center">Z4 · Threshold</span>
+            <div class="huge" style="font-size:108px">248<span class="unit" style="font-size:30px;display:block;margin-top:-6px">watts</span></div>
+            <p class="h2" style="margin-top:4px">2:30 left in block</p>
+          </div>
+          <div class="box sk push" style="margin:0 14px 14px;--r:14px"><div class="spread"><span class="tiny muted">NEXT</span><span class="h2">Z2 Recover · 3:00</span></div></div>
+        </div></div>
+        <figcaption class="note"><span class="lbl">A · Big number</span><br/>Maximum legibility. One job: hit this watt. Tiny “next” strip for what's coming. <b>Minimal cognitive load.</b></figcaption>
+      </figure>
+
+      <!-- V2 Timeline rail -->
+      <figure class="cell">
+        <div class="phone sk dark"><div class="screen">
+          <div class="statusbar"><span>9:41</span><span class="notch"></span><span class="batt">▮▮▮</span></div>
+          <div class="scr">
+            <div class="spread"><span class="tiny muted">BLOCK 4 / 9</span><span class="tiny muted">38:00 elapsed</span></div>
+            <div class="center" style="margin-top:8px">
+              <span class="pill acc sk">Z4 Threshold</span>
+              <div class="huge" style="font-size:88px;margin-top:6px">248<span class="unit" style="font-size:24px">w</span></div>
+              <p class="h2 muted">target · you: 251w</p>
+            </div>
+            <div class="push">
+              <p class="tiny muted" style="margin-bottom:6px">SESSION PROFILE</p>
+              <div class="prof" style="height:80px">
+                <i style="height:35%"></i><i class="acc" style="height:45%"></i><i style="height:35%"></i><i class="acc" style="height:75%"></i><i class="cur" style="height:78%"></i><i style="height:35%"></i><i class="acc" style="height:78%"></i><i style="height:35%"></i><i style="height:45%"></i>
+              </div>
+              <div class="rowflex" style="justify-content:space-between"><span class="tiny muted">now</span><span class="tiny muted">62:00</span></div>
+            </div>
+          </div>
+        </div></div>
+        <figcaption class="note"><span class="lbl">B · Timeline rail</span><br/>The whole workout shape stays visible — you always know how much suffering is left. <b>Best for structured intervals.</b></figcaption>
+      </figure>
+
+      <!-- V3 Zone color field -->
+      <figure class="cell">
+        <div class="phone sk"><div class="screen">
+          <div class="statusbar"><span>9:41</span><span class="notch"></span><span class="batt">▮▮▮</span></div>
+          <div class="zonefield" style="background:color-mix(in srgb, var(--accent) 60%, white)">
+            <span class="pill sk" style="background:var(--ink);color:var(--paper)">ZONE 4</span>
+            <div class="huge" style="font-size:120px">248</div>
+            <p class="h1" style="margin-top:-6px">watts · Threshold</p>
+            <p class="h2 muted" style="margin-top:8px">2:30 left</p>
+            <div class="dots" style="margin-top:14px"><span class="dot on"></span><span class="dot acc"></span><span class="dot"></span><span class="dot"></span></div>
+            <p class="tiny muted" style="margin-top:6px">swipe → for next block</p>
+          </div>
+        </div></div>
+        <figcaption class="note"><span class="lbl">C · Zone colour field</span><br/>The whole screen <b>is</b> the zone. Recognise effort by colour before you even read. Swipe between blocks.</figcaption>
+      </figure>
+
+      <!-- V4 RPE / dual metric -->
+      <figure class="cell">
+        <div class="phone sk dark"><div class="screen">
+          <div class="statusbar"><span>9:41</span><span class="notch"></span><span class="batt">▮▮▮</span></div>
+          <div class="rowflex" style="margin:6px 16px 0"><span class="seg on"></span><span class="seg acc"></span><span class="seg"></span><span class="seg"></span></div>
+          <div class="scr" style="text-align:center;gap:6px">
+            <span class="pill acc sk" style="align-self:center">Block 2 / 4 · 4:00</span>
+            <div class="huge" style="font-size:74px;margin-top:6px">HARD</div>
+            <p class="h2 muted">≈ 8 / 10 effort · push</p>
+            <div class="rowflex push" style="gap:10px">
+              <div class="box sk grow" style="--r:13px"><div class="col center"><span class="tiny muted">CADENCE</span><span style="font-size:26px">92</span></div></div>
+              <div class="box sk grow" style="--r:13px"><div class="col center"><span class="tiny muted">HR</span><span style="font-size:26px">163</span></div></div>
+            </div>
+            <div class="box sk" style="--r:13px;margin-top:2px"><div class="spread"><span class="tiny muted">NEXT</span><span class="h2">Easy · 3:00</span></div></div>
+          </div>
+        </div></div>
+        <figcaption class="note"><span class="lbl">D · RPE + metrics</span><br/>The <b>no-FTP fallback</b>: effort word instead of watts, with cadence/HR if a sensor's paired. Information-rich.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ====================== 5 · PRE-RIDE PREVIEW + EXPORT ====================== -->
+  <section class="grp">
+    <div class="grp-head"><span class="num">05</span><h2>Pre-ride preview &amp; .zwo export</h2><p>Before clipping in: what you're in for, and a one-tap Zwift export. Shown with FTP (TSS) and without (duration + intensity).</p></div>
+    <div class="row">
+
+      <!-- FTP preview -->
+      <figure class="cell">
+        <div class="phone sk"><div class="screen">
+          <div class="statusbar"><span>9:41</span><span class="notch"></span><span class="batt">▮▮▮</span></div>
+          <div class="scr">
+            <span class="tiny muted">← Today</span>
+            <h2 class="h1">Threshold 4×8</h2>
+            <p class="sub">Generated for “Good” · matches your endurance goal.</p>
+            <div class="box sk"><div class="prof" style="height:70px"><i style="height:30%"></i><i class="acc" style="height:75%"></i><i style="height:35%"></i><i class="acc" style="height:78%"></i><i style="height:35%"></i><i class="acc" style="height:78%"></i><i style="height:35%"></i><i class="acc" style="height:78%"></i><i style="height:32%"></i></div></div>
+            <div class="rowflex">
+              <div class="box sk grow center col" style="--r:13px"><span class="huge" style="font-size:38px">78</span><span class="tiny muted">est. TSS</span></div>
+              <div class="box sk grow center col" style="--r:13px"><span class="huge" style="font-size:38px">1:02</span><span class="tiny muted">duration</span></div>
+              <div class="box sk grow center col" style="--r:13px"><span class="huge" style="font-size:38px">.88</span><span class="tiny muted">IF</span></div>
+            </div>
+            <div class="push stack">
+              <div class="btn pri sk" style="min-height:56px;font-size:20px">▶ Start ride</div>
+              <div class="btn sk">⤓ Export .zwo for Zwift</div>
+            </div>
+          </div>
+        </div></div>
+        <figcaption class="note"><span class="lbl">FTP set</span><br/>TSS / IF up front. <b>.zwo</b> writes powers as FTP fractions; user text is XML-escaped on export.</figcaption>
+      </figure>
+
+      <!-- no FTP preview -->
+      <figure class="cell">
+        <div class="phone sk"><div class="screen">
+          <div class="statusbar"><span>9:41</span><span class="notch"></span><span class="batt">▮▮▮</span></div>
+          <div class="scr">
+            <span class="tiny muted">← Today</span>
+            <h2 class="h1">Hard intervals</h2>
+            <p class="sub">Generated for “Good” · feel-based effort.</p>
+            <div class="box sk"><div class="prof" style="height:70px"><i style="height:30%"></i><i class="ink" style="height:72%"></i><i style="height:35%"></i><i class="ink" style="height:76%"></i><i style="height:35%"></i><i class="ink" style="height:76%"></i><i style="height:32%"></i></div></div>
+            <div class="rowflex">
+              <div class="box sk grow center col" style="--r:13px"><span class="huge" style="font-size:38px">≈60</span><span class="tiny muted">minutes</span></div>
+              <div class="box sk grow center col" style="--r:13px"><span class="huge" style="font-size:30px">Hard</span><span class="tiny muted">intensity</span></div>
+            </div>
+            <div class="banner sk dash"><span>💡</span><span>Add FTP to unlock <b>TSS</b> &amp; watt-accurate .zwo export.</span></div>
+            <div class="push stack">
+              <div class="btn pri sk" style="min-height:56px;font-size:20px">▶ Start ride</div>
+              <div class="btn sk">⤓ Export .zwo</div>
+            </div>
+          </div>
+        </div></div>
+        <figcaption class="note"><span class="lbl">No FTP</span><br/>No fake precision: estimated <b>duration + Easy/Moderate/Hard</b> stand in for TSS.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ====================== 6 · STRAVA + PROGRESS ====================== -->
+  <section class="grp">
+    <div class="grp-head"><span class="num">06</span><h2>Strava &amp; progress</h2><p>Connect once, rides auto-match by date/duration, and a rolling 6-week TSS chart closes the loop. Includes the 429 “can't reach Strava” state.</p></div>
+    <div class="row">
+
+      <!-- connect -->
+      <figure class="cell">
+        <div class="phone sk"><div class="screen">
+          <div class="statusbar"><span>9:41</span><span class="notch"></span><span class="batt">▮▮▮</span></div>
+          <div class="scr">
+            <span class="tiny muted">← Profile</span>
+            <h2 class="h1">Connect Strava</h2>
+            <p class="sub">Auto-log your real rides against the sessions Pace builds.</p>
+            <div class="stack" style="gap:11px;margin-top:4px">
+              <div class="rowflex" style="align-items:center;gap:10px"><span class="iconc sk" style="--r:8px">✓</span><span>Match last 30 activities by date &amp; duration</span></div>
+              <div class="rowflex" style="align-items:center;gap:10px"><span class="iconc sk" style="--r:8px">🔒</span><span>Tokens stored encrypted — never in plaintext</span></div>
+              <div class="rowflex" style="align-items:center;gap:10px"><span class="iconc sk" style="--r:8px">↩</span><span>Disconnect anytime; tokens deleted</span></div>
+            </div>
+            <div class="push stack">
+              <div class="btn strava sk" style="min-height:54px;font-size:19px">Connect with Strava</div>
+              <p class="tiny muted center">Requests <b>activity:read</b> · verifies state param</p>
+            </div>
+          </div>
+        </div></div>
+        <figcaption class="note"><span class="lbl">Connect</span><br/>Official button + scope &amp; privacy stated plainly. Disconnect mirrors this with a “tokens deleted” confirm.</figcaption>
+      </figure>
+
+      <!-- progress chart -->
+      <figure class="cell">
+        <div class="phone sk"><div class="screen">
+          <div class="statusbar"><span>9:41</span><span class="notch"></span><span class="batt">▮▮▮</span></div>
+          <div class="scr">
+            <div class="appbar"><span class="brand">Progress</span><span class="pill acc sk">✓ Strava</span></div>
+            <div class="spread"><div class="col"><span class="tiny muted">THIS WEEK</span><span class="nw" style="font-size:24px">312 TSS</span></div><span class="pill sk">▲ 14%</span></div>
+            <div class="box sk">
+              <p class="tiny muted" style="margin-bottom:8px">WEEKLY LOAD · 6 WEEKS</p>
+              <div class="bar">
+                <i style="height:46%"></i><i style="height:60%"></i><i style="height:40%"></i><i style="height:72%"></i><i style="height:64%"></i><i class="acc" style="height:88%"></i>
+              </div>
+              <div class="spread" style="margin-top:6px"><span class="tiny muted nw">May 5</span><span class="tiny muted nw">now</span></div>
+            </div>
+            <div class="box sk stack">
+              <span class="tiny muted">AUTO-MATCHED</span>
+              <div class="spread"><span>Sun · Endurance 75′</span><span class="pill acc sk">✓ matched</span></div>
+              <div class="spread"><span>Fri · Threshold 4×8</span><span class="pill acc sk">✓ matched</span></div>
+            </div>
+            <div class="push spread tiny muted"><span>🏠 Today</span><span><b>📈 Progress</b></span><span>👤 Profile</span></div>
+          </div>
+        </div></div>
+        <figcaption class="note"><span class="lbl">Progress</span><br/>6-week rolling TSS bars, current week accented. Matched rides confirm the loop is closing.</figcaption>
+      </figure>
+
+      <!-- 429 retry -->
+      <figure class="cell">
+        <div class="phone sk"><div class="screen">
+          <div class="statusbar"><span>9:41</span><span class="notch"></span><span class="batt">▮▮▮</span></div>
+          <div class="scr">
+            <div class="appbar"><span class="brand">Progress</span><span class="pill sk dashed">⚠ Strava</span></div>
+            <div class="box sk dashed" style="text-align:center" >
+              <p class="tiny muted" style="margin-bottom:8px">WEEKLY LOAD · 6 WEEKS</p>
+              <div class="bar" style="opacity:.4"><i style="height:46%"></i><i style="height:60%"></i><i style="height:40%"></i><i style="height:72%"></i><i style="height:64%"></i><i style="height:80%"></i></div>
+            </div>
+            <div class="banner sk dash" style="align-items:center"><span style="font-size:20px">📡</span><span><b>Couldn't reach Strava.</b><br/><span class="muted">Rate-limited — retrying with backoff.</span></span></div>
+            <div class="btn sk push retry">↻ Tap to retry now</div>
+          </div>
+        </div></div>
+        <figcaption class="note"><span class="lbl">429 handling</span><br/>Rate-limit becomes an honest, tappable state with auto-backoff — last good data stays dimmed in place.</figcaption>
+      </figure>
+    </div>
+  </section>
+</div>
+
+<!-- ============ Tweaks (React island) ============ -->
+<div id="tweaks-root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel">
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "accent": "#fc4c02",
+  "vibe": "clean",
+  "font": "Patrick Hand",
+  "notes": true
+}/*EDITMODE-END*/;
+
+function App(){
+  const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+  React.useEffect(()=>{
+    const r = document.documentElement;
+    r.style.setProperty('--accent', t.accent);
+    // contrast ink-on-accent: dark text for light accents, light for dark
+    const dark = ['#fc4c02','#2563eb','#e0392b'].includes(t.accent);
+    r.style.setProperty('--accent-ink', dark ? '#fdfcf8' : '#211f1b');
+    r.style.setProperty('--rough-filter', t.vibe === 'clean' ? 'none' : 'url(#rough)');
+    const fontMap = {
+      'Patrick Hand':"'Patrick Hand','Comic Sans MS',cursive",
+      'Architects Daughter':"'Architects Daughter',cursive",
+      'Gaegu':"'Gaegu',cursive"
+    };
+    r.style.setProperty('--ui-font', fontMap[t.font] || fontMap['Patrick Hand']);
+    r.setAttribute('data-vibe', t.vibe);
+    r.setAttribute('data-notes', t.notes ? 'on' : 'off');
+  }, [t]);
+
+  return (
+    <TweaksPanel title="Tweaks">
+      <TweakSection label="Accent" />
+      <TweakColor label="Live / active colour" value={t.accent}
+        options={['#d4ff3f','#fc4c02','#2563eb','#ff5a5f','#c9c7bf']}
+        onChange={(v)=>setTweak('accent', v)} />
+      <TweakSection label="Sketch" />
+      <TweakRadio label="Line style" value={t.vibe} options={['rough','clean']}
+        onChange={(v)=>setTweak('vibe', v)} />
+      <TweakSelect label="Hand font" value={t.font}
+        options={['Patrick Hand','Architects Daughter','Gaegu']}
+        onChange={(v)=>setTweak('font', v)} />
+      <TweakSection label="Display" />
+      <TweakToggle label="Show rationale notes" value={t.notes}
+        onChange={(v)=>setTweak('notes', v)} />
+    </TweaksPanel>
+  );
+}
+ReactDOM.createRoot(document.getElementById('tweaks-root')).render(<App />);
+</script>
+</body>
+</html>
