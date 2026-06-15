@@ -16,7 +16,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 1: Foundation** - DB schema, auth (signup/login/logout), SIGNUP_ENABLED flag, multi-user scoping, security baseline
 - [x] **Phase 2: Profile & Onboarding** - Onboarding wizard, profile editing, FTP-optional data model, Coggan zone utility (completed 2026-06-14)
 - [x] **Phase 3: AI Session Generation** - Claude integration, Zod output schema, deterministic safety gate, per-user rate limit (completed 2026-06-14)
-- [ ] **Phase 4: Today View & Export** - On-bike glanceable display, .zwo export, pre-ride TSS/intensity preview
+- [x] **Phase 4: Today View & Export** - On-bike glanceable display, .zwo export, pre-ride TSS/intensity preview (completed 2026-06-15)
 - [ ] **Phase 5: Strava Integration** - OAuth connect/disconnect, AES-GCM token encryption, activity auto-match, 429 handling, progress chart
 - [ ] **Phase 6: PWA & Polish** - Serwist service worker, manifest, safe-area insets, touch targets, input attributes
 
@@ -118,12 +118,12 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 **Wave 1**
 
-  - [ ] 04-01-PLAN.md — TSS/intensity utility (PROG-01) + shared formatDuration + Phase 4 COPY + generateSessionAction redirect (D-02)
-  - [ ] 04-03-PLAN.md — .zwo XML builder + XML escaping (TODAY-03) + export Route Handler (IDOR-guarded, D-11/D-13)
+  - [x] 04-01-PLAN.md — TSS/intensity utility (PROG-01) + shared formatDuration + Phase 4 COPY + generateSessionAction redirect (D-02)
+  - [x] 04-03-PLAN.md — .zwo XML builder + XML escaping (TODAY-03) + export Route Handler (IDOR-guarded, D-11/D-13)
 
 **Wave 2** *(blocked on Wave 1)*
 
-  - [ ] 04-02-PLAN.md — /session/[id] RSC page + SessionDetail tap-to-advance riding view (TODAY-01/02) + dashboard "View session" link (D-03)
+  - [x] 04-02-PLAN.md — /session/[id] RSC page + SessionDetail tap-to-advance riding view (TODAY-01/02) + dashboard "View session" link (D-03)
 
 **UI hint**: yes
 

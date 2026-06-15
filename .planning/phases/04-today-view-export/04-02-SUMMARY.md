@@ -43,8 +43,8 @@ decisions:
 metrics:
   duration: "~4 minutes (Tasks 1-3; Task 4 is human-verify checkpoint)"
   completed: "2026-06-15"
-  tasks_completed: 3
-  files_changed: 5
+  tasks_completed: 4
+  files_changed: 7
 ---
 
 # Phase 04 Plan 02: Session Detail UI — Sub-State Machine & Dashboard Link Summary
@@ -58,7 +58,7 @@ RSC session page at /session/[id] with auth gate and IDOR guard, a three-state c
 | 1 | Session RSC page — auth, IDOR, server-side TSS/intensity | 9aac56a | src/app/(app)/session/[id]/page.tsx |
 | 2 | SessionDetail sub-state machine + SessionBlockRow | 7b1b32d | src/components/session/session-detail.tsx, src/components/session/session-block-row.tsx |
 | 3 | Dashboard View session link + dead-code removal | d54eb1c | src/app/(app)/dashboard/page.tsx, src/components/session/session-generator.tsx |
-| 4 | Human verification checkpoint | — | awaiting human sign-off |
+| 4 | Human verification checkpoint + export fix | 965d47f | src/components/session/session-detail.tsx, src/app/api/session/[id]/export/route.ts |
 
 ## Verification Results
 
@@ -109,6 +109,17 @@ All threats in the plan's threat model are addressed:
 | T-04-08 | Only title/totalDurationSec/blocks/derived TSS passed as props; rawJson not forwarded | page.tsx line 57–62 |
 | T-04-09 | Auth check (ironSession.id guard + redirect) runs before findTrainingSession call | page.tsx line 36–39 vs 42 |
 | T-04-SC | No new packages introduced | confirmed |
+
+## UAT Results (Task 4 — Human Verification)
+
+All 5 UAT items passed:
+1. Generate → redirect to /session/[id] ✓
+2. Pre-ride summary: title, badge row (TSS · duration), block list ✓
+3. Export .zwo: Chrome download works ✓ (fix: `window.open()` button bypasses Next.js anchor interceptor; `application/xml` Content-Type)
+4. Riding view: 120px watt numeral, tap to advance, zone/RPE ✓
+5. Complete state: "Session complete" heading, "Back to dashboard" ✓
+
+Root cause of Chrome export failure: Next.js App Router's global click handler intercepted `<a>` clicks (including `target="_blank"`) before the browser could process them as downloads. `window.open()` called from a `<button>` onClick is not intercepted.
 
 ## Self-Check: PASSED
 
