@@ -108,9 +108,10 @@ export async function POST(req: Request): Promise<NextResponse> {
       pgMessage.includes("unique") ||
       pgMessage.includes("duplicate");
     if (isUniqueViolation) {
-      // Return 200 with ok:true — do not reveal whether the email is registered.
-      // This prevents account enumeration via signup (D-07 applies to signup too).
-      return NextResponse.json({ ok: true }, { status: 200 });
+      return NextResponse.json(
+        { error: "Email already registered." },
+        { status: 409 }
+      );
     }
     throw err;
   }
