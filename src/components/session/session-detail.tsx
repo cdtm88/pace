@@ -95,7 +95,8 @@ export function SessionDetail({
         <div className="sticky bottom-0 flex h-16 items-center gap-3 border-t border-border bg-background px-4">
           <a
             href={`/api/session/${session.id}/export`}
-            download
+            target="_blank"
+            rel="noopener noreferrer"
             className="flex-1 inline-flex items-center justify-center rounded-lg border border-border bg-background px-4 py-2 text-sm font-medium text-foreground transition-all hover:bg-muted"
           >
             {COPY.SESSION_PRE_RIDE_EXPORT_BTN}
