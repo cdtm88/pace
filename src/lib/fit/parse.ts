@@ -52,7 +52,8 @@ export async function parseFitFile(buffer: Buffer): Promise<FitSession> {
   });
 
   // parseAsync throws for genuinely invalid binaries (no FIT magic header etc.)
-  const data = await parser.parseAsync(buffer);
+  // Cast to ArrayBuffer to satisfy the strict generic — Buffer is a view of ArrayBuffer (Node built-in)
+  const data = await parser.parseAsync(buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength) as ArrayBuffer);
 
   const session = data.sessions?.[0];
   if (!session) {
