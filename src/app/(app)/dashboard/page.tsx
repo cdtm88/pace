@@ -18,7 +18,10 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { getIronSession } from "iron-session";
 import { sessionOptions, type SessionData } from "@/lib/session";
-import { findUserProfileByUserId } from "@/lib/db/queries";
+import {
+  findUserProfileByUserId,
+  findLatestSessionByUserId,
+} from "@/lib/db/queries";
 import { COPY } from "@/lib/copy";
 import { SessionGenerator } from "@/components/session/session-generator";
 
@@ -35,6 +38,9 @@ export default async function DashboardPage() {
 
   // Fetch profile for FTP-active vs RPE-mode status (PROF-03)
   const profile = await findUserProfileByUserId(session.id);
+
+  // Fetch latest session for "View session" re-entry link (D-03); null for new users.
+  const latestSession = await findLatestSessionByUserId(session.id);
 
   // Substitute real watt value into DASHBOARD_FTP_ACTIVE (never expose raw {value} token)
   const ftpStatus = profile?.ftp
@@ -59,6 +65,16 @@ export default async function DashboardPage() {
 
         {/* Session generator — readiness tap-selector + generate button + result card (D-11, D-12) */}
         <SessionGenerator profile={profile} />
+
+        {/* View session link — shown only when a session exists (D-03, Pitfall 5) */}
+        {latestSession && (
+          <a
+            href={`/session/${latestSession.id}`}
+            className="text-sm font-medium text-foreground underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            {COPY.SESSION_DASHBOARD_VIEW_LINK}
+          </a>
+        )}
 
         {/* Edit profile link — navigates to /profile (UI-SPEC §Screen 2 item 5) */}
         <a

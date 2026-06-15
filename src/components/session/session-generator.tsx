@@ -27,22 +27,11 @@
 import { useState, useTransition } from "react";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { ErrorBanner } from "@/components/ui/error-banner";
 import { generateSessionAction } from "@/lib/actions/session";
-import type { GeneratedSession } from "@/lib/db/schemas/session";
-import { formatDuration } from "@/lib/training/format";
 
-/** The display-safe subset of a training session row for summary rendering. */
-type SessionSummary = {
-  title: string;
-  totalDurationSec: number;
-  blocks: unknown;
-};
-
-type ActionResult =
-  | { data: SessionSummary & Record<string, unknown>; error?: undefined }
-  | { data?: undefined; error: string };
+/** generateSessionAction now redirects on success — only error path returns data. */
+type ActionResult = { error?: string } | undefined;
 
 interface ReadinessOption {
   score: number;
@@ -69,7 +58,7 @@ interface SessionGeneratorProps {
 export function SessionGenerator({ profile }: SessionGeneratorProps) {
   const [isPending, startTransition] = useTransition();
   const [readiness, setReadiness] = useState<number | null>(null);
-  const [result, setResult] = useState<ActionResult | null>(null);
+  const [result, setResult] = useState<ActionResult>(undefined);
 
   function handleGenerate() {
     if (readiness === null) return;
@@ -79,9 +68,6 @@ export function SessionGenerator({ profile }: SessionGeneratorProps) {
       setResult(res as ActionResult);
     });
   }
-
-  // Extract GeneratedSession-compatible fields from the result for display
-  const sessionData = result?.data;
 
   return (
     <div className="space-y-4">
@@ -100,7 +86,7 @@ export function SessionGenerator({ profile }: SessionGeneratorProps) {
               onClick={() => {
                 setReadiness(score);
                 // Clear previous result when changing readiness
-                setResult(null);
+                setResult(undefined);
               }}
               aria-pressed={readiness === score}
             >
@@ -127,32 +113,6 @@ export function SessionGenerator({ profile }: SessionGeneratorProps) {
           "Generate Session"
         )}
       </Button>
-
-      {/* Success: compact session summary card (D-12) */}
-      {sessionData && (
-        <Card>
-          <CardHeader>
-            <CardTitle>{sessionData.title}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <dl className="space-y-1 text-sm text-muted-foreground">
-              <div className="flex items-center gap-2">
-                <dt className="font-medium text-foreground">Duration</dt>
-                <dd>{formatDuration(sessionData.totalDurationSec)}</dd>
-              </div>
-              <div className="flex items-center gap-2">
-                <dt className="font-medium text-foreground">Blocks</dt>
-                <dd>
-                  {Array.isArray(sessionData.blocks)
-                    ? (sessionData.blocks as GeneratedSession["blocks"]).length
-                    : 0}{" "}
-                  blocks
-                </dd>
-              </div>
-            </dl>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Error: GEN-02 fallback or GEN-03 limit message (D-13) */}
       {result?.error && <ErrorBanner message={result.error} />}
