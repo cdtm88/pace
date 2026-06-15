@@ -22,10 +22,13 @@ vi.mock("@/lib/db/index", () => {
   const mockWhere = vi.fn((..._args: unknown[]) =>
     Promise.resolve(_queryResult)
   );
+  const mockReturning = vi.fn(() => Promise.resolve(_queryResult));
+  const mockDeleteWhere = vi.fn((..._args: unknown[]) => ({ returning: mockReturning }));
   const mockFrom = vi.fn(() => ({ where: mockWhere }));
   const mockSelect = vi.fn(() => ({ from: mockFrom }));
+  const mockDelete = vi.fn(() => ({ where: mockDeleteWhere }));
   return {
-    db: { select: mockSelect },
+    db: { select: mockSelect, delete: mockDelete },
   };
 });
 
@@ -43,9 +46,10 @@ vi.mock("@/lib/db/schema", () => ({
     userId: "userProfiles.userId",
     id: "userProfiles.id",
   },
-  stravaConnections: {
-    userId: "stravaConnections.userId",
-    id: "stravaConnections.id",
+  activityUploads: {
+    userId: "activityUploads.userId",
+    id: "activityUploads.id",
+    matchedSessionId: "activityUploads.matchedSessionId",
   },
 }));
 
@@ -55,7 +59,7 @@ import { db } from "@/lib/db/index";
 import {
   findTrainingSession,
   findUserProfile,
-  findStravaConnection,
+  deleteActivityUpload,
 } from "@/lib/db/queries";
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -96,12 +100,14 @@ describe("IDOR guard — WHERE and() pattern (D-03, AUTH-05)", () => {
     expect(result).toEqual(ownedSession);
   });
 
-  it("stravaConnections query is user-scoped — cross-user returns null", async () => {
+  it("deleteActivityUpload is IDOR-guarded — cross-user delete returns empty array (no-op)", async () => {
+    // deleteActivityUpload uses and(eq(userId), eq(id)) — a cross-user delete returns
+    // an empty array (no rows deleted), not an error. Caller checks for empty → 404.
     setQueryResult([]);
 
-    const result = await findStravaConnection(USER_A, "connection-owned-by-b");
+    const result = await deleteActivityUpload(USER_A, "upload-owned-by-b");
 
-    expect(result).toBeNull();
+    expect(result).toEqual([]);
   });
 
   it("userProfiles query is user-scoped — cross-user returns null", async () => {
@@ -140,11 +146,12 @@ describe("Cross-user resource access returns null → 404 path (D-09)", () => {
     expect(result).toBeNull();
   });
 
-  it("findStravaConnection returns null for another user's connection (→ 404 not 403)", async () => {
+  it("deleteActivityUpload returns empty array for another user's upload (→ 404 not 403)", async () => {
+    // and() enforces userId scoping; cross-user delete returns [] — caller returns 404.
     setQueryResult([]);
 
-    const result = await findStravaConnection(USER_B, "connection-owned-by-a");
+    const result = await deleteActivityUpload(USER_B, "upload-owned-by-a");
 
-    expect(result).toBeNull();
+    expect(result).toEqual([]);
   });
 });

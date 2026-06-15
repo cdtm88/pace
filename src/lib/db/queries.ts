@@ -15,7 +15,7 @@ import { db } from "@/lib/db/index";
 import {
   trainingSessions,
   userProfiles,
-  stravaConnections,
+  activityUploads,
 } from "@/lib/db/schema";
 
 // ── Training Sessions ─────────────────────────────────────────────────────────
@@ -113,27 +113,75 @@ export async function findUserProfile(userId: string, profileId: string) {
   return rows[0] ?? null;
 }
 
-// ── Strava Connections ────────────────────────────────────────────────────────
+// ── Activity Uploads ──────────────────────────────────────────────────────────
 
 /**
- * Fetch the Strava connection scoped to the authenticated user.
+ * Insert a new activity upload row for the authenticated user.
+ *
+ * userId is always supplied by the Route Handler from the iron-session cookie —
+ * never from client-supplied input (T-05-01).
+ * Returns the inserted row (useful for reading back the generated id).
+ */
+export async function insertActivityUpload(
+  values: typeof activityUploads.$inferInsert
+) {
+  const rows = await db.insert(activityUploads).values(values).returning();
+  return rows[0] ?? null;
+}
+
+/**
+ * List all activity uploads for the authenticated user.
+ *
+ * IDOR note: Single eq() is correct here — list query scoped to caller's own rows only.
+ * No secondary resource id to guard (T-05-02).
+ */
+export async function findActivityUploadsByUserId(userId: string) {
+  return db
+    .select()
+    .from(activityUploads)
+    .where(eq(activityUploads.userId, userId));
+}
+
+/**
+ * Delete an activity upload scoped to the authenticated user.
  *
  * IDOR guard: and() is mandatory here — do not split into chained .where() calls.
- * Returns null when no connection exists or belongs to a different user.
+ * Returns the deleted rows so the caller can detect a no-op (cross-user / not-found → 404).
+ * Single and() call prevents IDOR: a userId mismatch returns an empty array (T-05-01, Pitfall 4).
  */
-export async function findStravaConnection(
-  userId: string,
-  connectionId: string
-) {
+export async function deleteActivityUpload(userId: string, uploadId: string) {
   // IDOR guard: and() is mandatory here — do not split into chained .where() calls.
-  const rows = await db
-    .select()
-    .from(stravaConnections)
+  return db
+    .delete(activityUploads)
     .where(
       and(
-        eq(stravaConnections.userId, userId),
-        eq(stravaConnections.id, connectionId)
+        eq(activityUploads.userId, userId),
+        eq(activityUploads.id, uploadId)
+      )
+    )
+    .returning();
+}
+
+/**
+ * Set (or update) the matched session for an activity upload.
+ *
+ * IDOR guard: and() is mandatory here — do not split into chained .where() calls.
+ * Used for re-matching (D-06: last upload wins; no unique constraint on matchedSessionId).
+ * matchedSessionId may be null to unlink a previous match.
+ */
+export async function setUploadMatch(
+  userId: string,
+  uploadId: string,
+  matchedSessionId: string | null
+) {
+  // IDOR guard: and() is mandatory here — do not split into chained .where() calls.
+  return db
+    .update(activityUploads)
+    .set({ matchedSessionId })
+    .where(
+      and(
+        eq(activityUploads.userId, userId),
+        eq(activityUploads.id, uploadId)
       )
     );
-  return rows[0] ?? null;
 }
