@@ -59,6 +59,11 @@ export async function generateSessionAction(
   }
   const userId = ironSession.id
 
+  // ── Step 1b: Input validation (BEFORE rate limit — bad requests must not consume quota) ──
+  if (!Number.isInteger(readinessScore) || readinessScore < 0 || readinessScore > 3) {
+    return { error: 'Invalid readiness score.' }
+  }
+
   // ── Step 2: Profile ───────────────────────────────────────────────────────
   const profile = await findUserProfileByUserId(userId)
 
