@@ -139,7 +139,21 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. User can delete an uploaded activity; the record and session match are removed
   4. User can view a weekly TSS bar chart (recharts, 6-week rolling window) showing training load from matched uploads
 
-**Plans**: TBD
+**Note**: Replanned 2026-06-15 — Strava OAuth abandoned (requires paid subscription); replaced with direct .fit file upload. Strava OAuth deferred to v2 (UPLOAD-V2-01).
+
+**Plans**: 3 plans
+
+**Wave 1**
+
+  - [ ] 05-01-PLAN.md — activity_uploads schema (DROP strava_connections, CREATE activity_uploads) + IDOR-safe upload query helpers + estimateRideTSS + matchActivity pure functions + vitest setup + fit test scaffolds
+
+**Wave 2** *(blocked on Wave 1)*
+
+  - [ ] 05-02-PLAN.md — install fit-file-parser + parseFitFile wrapper + POST /api/fit/upload Route Handler (auth/size/parse/match/TSS/insert) + deleteUploadAction Server Action
+
+**Wave 3** *(blocked on Wave 2)*
+
+  - [ ] 05-03-PLAN.md — install recharts + upload COPY keys + buildWeeklyTSS + TssChart + UploadFitButton + dashboard wiring + browser-verify checkpoint
 
 **UI hint**: yes
 
@@ -170,5 +184,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 2. Profile & Onboarding | 3/3 | Complete   | 2026-06-14 |
 | 3. AI Session Generation | 3/3 | Complete   | 2026-06-14 |
 | 4. Today View & Export | 3/3 | Complete | 2026-06-15 |
-| 5. Strava Integration | 0/3 | Not started | - |
+| 5. Activity Upload | 0/3 | Planned | - |
 | 6. PWA & Polish | 0/TBD | Not started | - |
