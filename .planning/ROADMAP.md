@@ -141,7 +141,20 @@ Decimal phases appear between their surrounding integers in numeric order.
   5. User can disconnect Strava; tokens are deleted from the database on disconnect
   6. User can view a weekly TSS bar chart (recharts, 6-week rolling window) showing training load over time
 
-**Plans**: TBD
+**Plans**: 3 plans
+
+**Wave 1**
+
+  - [ ] 05-01-PLAN.md — Schema migrations (token columns + strava_activity_id) + AES-GCM crypto + activity matcher + IDOR-safe queries + SessionData CSRF field + env null-check + Strava SVG + Wave 0 test scaffolds
+
+**Wave 2** *(blocked on Wave 1)*
+
+  - [ ] 05-02-PLAN.md — Strava API client (proactive refresh + 429 backoff + fetch-and-match) + OAuth callback Route Handler (CSRF/scope/encrypt/upsert/match) + connect/disconnect/refresh Server Actions
+
+**Wave 3** *(blocked on Wave 2)*
+
+  - [ ] 05-03-PLAN.md — Install recharts + 17 COPY keys + buildWeeklyTSS + TSSChart + StravaSection (connect/refresh/inline-disconnect/429-retry) + dashboard wiring + browser-verify checkpoint
+
 **UI hint**: yes
 
 ### Phase 6: PWA & Polish
@@ -171,5 +184,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 2. Profile & Onboarding | 3/3 | Complete   | 2026-06-14 |
 | 3. AI Session Generation | 3/3 | Complete   | 2026-06-14 |
 | 4. Today View & Export | 3/3 | Complete | 2026-06-15 |
-| 5. Strava Integration | 0/TBD | Not started | - |
+| 5. Strava Integration | 0/3 | Not started | - |
 | 6. PWA & Polish | 0/TBD | Not started | - |
