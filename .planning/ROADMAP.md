@@ -17,7 +17,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 2: Profile & Onboarding** - Onboarding wizard, profile editing, FTP-optional data model, Coggan zone utility (completed 2026-06-14)
 - [x] **Phase 3: AI Session Generation** - Claude integration, Zod output schema, deterministic safety gate, per-user rate limit (completed 2026-06-14)
 - [x] **Phase 4: Today View & Export** - On-bike glanceable display, .zwo export, pre-ride TSS/intensity preview (completed 2026-06-15)
-- [ ] **Phase 5: Activity Upload** - .fit file upload, server-side FIT parsing, activity-to-session matching, weekly TSS chart
+- [x] **Phase 5: Activity Upload** - .fit file upload, server-side FIT parsing, activity-to-session matching, weekly TSS chart (completed 2026-06-15)
 - [ ] **Phase 6: PWA & Polish** - Serwist service worker, manifest, safe-area insets, touch targets, input attributes
 
 ## Phase Details
@@ -153,7 +153,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 **Wave 3** *(blocked on Wave 2)*
 
-  - [ ] 05-03-PLAN.md — install recharts + upload COPY keys + buildWeeklyTSS + TssChart + UploadFitButton + dashboard wiring + browser-verify checkpoint
+  - [x] 05-03-PLAN.md — install recharts + upload COPY keys + buildWeeklyTSS + TssChart + UploadFitButton + dashboard wiring + browser-verify checkpoint
 
 **UI hint**: yes
 
@@ -184,5 +184,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 2. Profile & Onboarding | 3/3 | Complete   | 2026-06-14 |
 | 3. AI Session Generation | 3/3 | Complete   | 2026-06-14 |
 | 4. Today View & Export | 3/3 | Complete | 2026-06-15 |
-| 5. Activity Upload | 2/3 | In Progress|  |
+| 5. Activity Upload | 3/3 | Complete   | 2026-06-15 |
 | 6. PWA & Polish | 0/TBD | Not started | - |
