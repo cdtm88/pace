@@ -54,11 +54,10 @@ export function validateSessionSafety(
           reason: `More than 3 consecutive work blocks detected at block ${block.order}; insert a rest or cooldown`,
         };
       }
-    } else if (block.type === "rest" || block.type === "cooldown") {
-      // Reset counter on rest or cooldown
+    } else if (block.type === "rest" || block.type === "cooldown" || block.type === "warmup") {
+      // Reset counter on rest, cooldown, or warmup — any non-work block breaks a consecutive sequence
       consecutiveWorkCount = 0;
     }
-    // warmup does not reset the work counter (warmup only appears at session start)
   }
 
   // Check 5: totalDurationSec must equal the actual sum of block durations
