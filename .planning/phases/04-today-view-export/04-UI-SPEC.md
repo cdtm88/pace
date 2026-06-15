@@ -52,19 +52,20 @@ Source: Established in Phase 1 UI-SPEC; confirmed from existing component patter
 
 ## Typography
 
+Two weights only: **400 (regular)** for all content roles; **900 (black)** for the riding-view watt numeral. The 14/16/20/120px size spread provides sufficient hierarchy without weight variation.
+
 | Role | Size | Weight | Line Height | Usage |
 |------|------|--------|-------------|-------|
 | Body | 16px | 400 (regular) | 1.5 | Block row text, badge row, helper text |
-| Label | 14px | 500 (medium) | 1.4 | Block type label, duration label, block counter, zone/RPE label (secondary in riding view) |
-| Heading | 20px | 600 (semibold) | 1.2 | Session title on pre-ride screen |
+| Label | 14px | 400 (regular) | 1.4 | Block type label, duration label, block counter, zone/RPE label (secondary in riding view) |
+| Heading | 20px | 400 (regular) | 1.2 | Session title on pre-ride screen |
 | Display | 120px | 900 (black) | 1.0 | Watt numeral in riding view — `text-[120px] font-black leading-none tabular-nums` |
 
 Notes:
 - The display size (120px) is Claude's discretion per CONTEXT.md. It fills approximately 60–70% of a 390px-wide iPhone viewport at one digit (e.g., "280"). Use `tabular-nums` to prevent numeral width jitter between blocks.
 - All input fields elsewhere in the app use 16px minimum (PWA-05 compliance, already established).
-- Two weight classes only: 400/500 for content, 600/900 for emphasis — never more than two active in any single view.
 
-Source: Existing pattern from `session-generator.tsx` (`text-sm font-medium` = 14px/500; `text-base font-medium` = 16px/500); display size from CONTEXT.md / RESEARCH.md Pattern 2 discretion.
+Source: Display size from CONTEXT.md / RESEARCH.md Pattern 2 discretion; weights collapsed to 400/900 per two-weight rule.
 
 ---
 
@@ -83,7 +84,7 @@ Accent (`--primary` white) reserved for:
 2. "Export .zwo" button (pre-ride sticky action row, variant="outline" — white border/text on dark)
 3. "Back to dashboard" link/button on session complete state
 
-Zone label badge (when FTP set) color: `--secondary` (`#27272a` zinc-800) background with `--foreground` (`#fafafa`) text — styled as an inline pill badge using `bg-secondary text-secondary-foreground rounded-full px-2 py-0.5 text-xs font-medium`.
+Zone label badge (when FTP set) color: `--secondary` (`#27272a` zinc-800) background with `--foreground` (`#fafafa`) text — styled as an inline pill badge using `bg-secondary text-secondary-foreground rounded-full px-2 py-0.5 text-xs`.
 
 RPE label (no-FTP path): plain text, `text-muted-foreground`, no badge background.
 
@@ -177,7 +178,7 @@ No new shadcn components need to be installed for this phase.
 Riding view layout (flex column, centered, `min-h-dvh`, `cursor-pointer`, `select-none`):
 1. Block counter — top, `text-muted-foreground text-sm` — `mb-auto` pushes content to center
 2. Watt numeral — center, `text-[120px] font-black leading-none tabular-nums text-foreground`
-3. Zone/RPE label — below numeral, `text-muted-foreground text-sm font-medium` — e.g., `Z4 / Threshold` or `Hard`
+3. Zone/RPE label — below numeral, `text-muted-foreground text-sm` — e.g., `Z4 / Threshold` or `Hard`
 4. Block type label — below zone, `text-muted-foreground text-xs` — e.g., `Work · 10 min`
 
 ### Session Complete View
